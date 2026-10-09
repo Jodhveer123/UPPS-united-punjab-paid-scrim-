@@ -193,3 +193,114 @@
 .room-access { margin-top: 12px; }
 .room-access-card { border: 1px solid var(--border, #ddd); border-radius: 12px; padding: 12px; margin-top: 10px; }
 .room-access-card code { overflow-wrap: anywhere; user-select: text; }
+
+/* UPPS Help Centre */
+.upps-help-widget {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 9999;
+  font-family: inherit;
+}
+
+.upps-help-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 20px;
+  background: #6d28d9;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 5px 22px #0004;
+}
+
+.upps-help-button:hover {
+  background: #5b21b6;
+  transform: translateY(-1px);
+}
+
+.upps-help-panel {
+  position: absolute;
+  right: 0;
+  bottom: 62px;
+  width: min(330px, calc(100vw - 36px));
+  padding: 18px;
+  border: 1px solid #8885;
+  border-radius: 18px;
+  background: #fff;
+  color: #18181b;
+  box-shadow: 0 10px 35px #0003;
+}
+
+.upps-help-panel[hidden] {
+  display: none;
+}
+
+.upps-help-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.upps-help-heading strong {
+  font-size: 18px;
+}
+
+.upps-help-heading p {
+  margin: 5px 0 0;
+  color: #666;
+  font-size: 13px;
+}
+
+#uppsHelpClose {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.upps-help-link {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 9px 0;
+  padding: 13px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.upps-telegram {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.upps-instagram {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.upps-whatsapp-disabled {
+  background: #f4f4f5;
+  color: #71717a;
+  cursor: default;
+}
+
+.upps-help-footer {
+  margin: 14px 0 0;
+  color: #71717a;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .upps-help-widget {
+    right: 14px;
+    bottom: 14px;
+  }
+}
