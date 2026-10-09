@@ -75,6 +75,16 @@
             <form id="tournamentForm" class="form-grid">
               <label>Title<input name="title" required></label>
               <label>Mode<select name="mode"><option>SOLO</option><option>DUO</option><option>SQUAD</option></select></label>
+              
+<label>Entry Type
+  <select name="entryType" required>
+    <option value="FREE">FREE</option>
+    <option value="PAID">PAID</option>
+  </select>
+</label>
+<label>Entry Fee (₹)
+  <input name="entryFee" type="number" min="0" value="0" required>
+</label>
               <label>Capacity<input name="capacity" type="number" min="1" required></label>
               <label>Matches<input name="matchesCount" type="number" min="1" value="1"></label>
               <label class="full">Description<textarea name="description"></textarea></label>
