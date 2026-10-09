@@ -67,14 +67,14 @@ fetch("/api/tournaments/" + encodeURIComponent(id))
           </li>
 
           <li>
-            Only an approved registration gives you
-            an eligible, confirmed slot.
+            Only if you pay the entry fees on qr code which you see on register page registration gives you
+            an eligible, and you get confirmed slot all info come in your whatsapp number or on your player page and you get the room id and pass and other all info.but if this tournament free of entry fees you can skip this payment.
           </li>
         </ol>
 
         <p class="warning-note">
           <b>Important:</b>
-          Registering does not automatically make you eligible to play.
+          Registering does not automatically make you eligible to play if you pay then we check and alot you slot but if tournamnet fees free then you eligible automaticaly without payment for any help contack our help centre.
         </p>
 
       </section>
@@ -447,20 +447,18 @@ function showRegistrationModal(
       <div class="whatsapp-section">
 
         <h3>
-          Join our WhatsApp group
+          do payment on below qr if this tournament has entry fees.
         </h3>
 
         <p class="muted">
-          Join the official UPPS WhatsApp group
-          after registering.
-          Your tournament registration still
-          requires organizer verification.
+          when you pay our system check it and within 1 hour we give you your slot info and tournament start time
+          for any help contact our help centre.
         </p>
 
 
         <img
-          src="/assets/qr.jpg"
-          alt="UPPS WhatsApp Group QR Code"
+          src="qr.jpg"
+          alt="UPPS payment QR Code"
           class="whatsapp-qr"
         >
 
@@ -470,7 +468,7 @@ function showRegistrationModal(
           id="whatsappJoinBtn"
           class="btn"
         >
-          Join WhatsApp Group
+         payment qr code
         </a>
 
       </div>
