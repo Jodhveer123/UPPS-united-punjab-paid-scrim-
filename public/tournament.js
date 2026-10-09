@@ -472,7 +472,7 @@ function showRegistrationModal(
           id="whatsappJoinBtn"
           class="btn"
         >
-         payment qr code
+        join our whatsapp for more updates.
         </a>
 
       </div>
