@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>UPPS Admin</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="admin-body">
+  <div id="loginView" class="admin-login-wrap">
+    <form id="adminLoginForm" class="admin-login-card">
+      <div class="eyebrow">UPPS ADMIN</div>
+      <h1>Admin Login</h1>
+      <p class="muted">Tournament management dashboard.</p>
+      <label>Username<input id="adminUsername" autocomplete="username" required></label>
+      <label>Password<input id="adminPassword" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit">Login</button>
+      <div id="loginMessage" class="admin-message"></div>
+    </form>
+  </div>
+
+  <div id="adminApp" class="admin-shell hidden">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">UPPS<span>ADMIN</span></div>
+      <nav id="adminNav" class="admin-nav">
+        <button data-section="dashboard" class="active">Dashboard</button>
+        <button data-section="players">Players</button>
+        <button data-section="tournaments">Tournaments</button>
+        <button data-section="registrations">Registrations</button>
+        <button data-section="matches">Matches</button>
+        <button data-section="results">Results</button>
+        <button data-section="reviews">Reviews</button>
+        <button data-section="staff">Staff</button>
+        <button data-section="audit">Audit Logs</button>
+      </nav>
+      <button id="adminLogoutBtn" class="admin-logout">Logout</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <div class="eyebrow">CONTROL CENTER</div>
+          <h1 id="sectionTitle">Dashboard</h1>
+        </div>
+        <div id="adminIdentity" class="admin-identity"></div>
+      </header>
+
+      <div id="globalMessage" class="admin-message"></div>
+
+      <section id="section-dashboard" class="admin-section active">
+        <div class="stats-grid">
+          <div class="stat-card"><span>Players</span><strong id="statPlayers">0</strong></div>
+          <div class="stat-card"><span>Tournaments</span><strong id="statTournaments">0</strong></div>
+          <div class="stat-card"><span>Pending Registrations</span><strong id="statPending">0</strong></div>
+          <div class="stat-card"><span>Verified Registrations</span><strong id="statVerified">0</strong></div>
+          <div class="stat-card"><span>Live</span><strong id="statLive">0</strong></div>
+          <div class="stat-card"><span>Reviews Pending</span><strong id="statReviews">0</strong></div>
+        </div>
+        <div class="admin-grid-2">
+          <div class="admin-card"><h2>Recent Registrations</h2><div id="dashboardRegistrations" class="list"></div></div>
+          <div class="admin-card"><h2>Recent Players</h2><div id="dashboardPlayers" class="list"></div></div>
+        </div>
+      </section>
+
+      <section id="section-players" class="admin-section">
+        <div class="section-head"><div><h2>Players</h2><p>View player accounts and control account status.</p></div><input id="playerSearch" class="search" placeholder="Search username, name or UID"></div>
+        <div class="table-wrap"><table><thead><tr><th>Player</th><th>Username</th><th>Free Fire UID</th><th>Contact</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody id="playersTable"></tbody></table></div>
+      </section>
+
+      <section id="section-tournaments" class="admin-section">
+        <div class="admin-grid-2">
+          <div class="admin-card">
+            <h2>Create Tournament</h2>
+            <p class="muted">Create a tournament shell and publish it when ready.</p>
+            <form id="tournamentForm" class="form-grid">
+              <label>Title<input name="title" required></label>
+              <label>Mode<select name="mode"><option>SOLO</option><option>DUO</option><option>SQUAD</option></select></label>
+              <label>Capacity<input name="capacity" type="number" min="1" required></label>
+              <label>Matches<input name="matchesCount" type="number" min="1" value="1"></label>
+              <label class="full">Description<textarea name="description"></textarea></label>
+              <label>Status<select name="status"><option>DRAFT</option><option>PUBLISHED</option><option>REGISTRATION OPEN</option></select></label>
+              <label>Scoring Type<input name="scoringType" value="CUSTOM"></label>
+              <label>Start Time<input name="startAt" type="datetime-local"></label>
+              <label>Registration Close<input name="registrationCloseAt" type="datetime-local"></label>
+              <label class="full">Rules<textarea name="rules"></textarea></label>
+              <label class="full">Prize Information<textarea name="prizeSummary" placeholder="Describe the prize structure without payment instructions."></textarea></label>
+              <button class="btn primary full" type="submit">Create Tournament</button>
+            </form>
+          </div>
+          <div class="admin-card"><h2>All Tournaments</h2><div id="tournamentsList" class="list"></div></div>
+        </div>
+      </section>
+
+      <section id="section-registrations" class="admin-section">
+        <div class="section-head"><div><h2>Registrations</h2><p>Approve, reject, waitlist or cancel player registrations.</p></div><select id="registrationFilter"><option value="ALL">All</option><option value="PENDING">Pending</option><option value="VERIFIED">Approved</option><option value="REJECTED">Rejected</option><option value="WAITLISTED">Waitlisted</option><option value="CANCELLED">Cancelled</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>Registration</th><th>Player</th><th>Tournament</th><th>Mode</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody id="registrationsTable"></tbody></table></div>
+      </section>
+
+      <section id="section-matches" class="admin-section">
+        <div class="admin-grid-2">
+          <div class="admin-card"><h2>Create Match</h2><form id="matchForm" class="form-grid"><label>Tournament<select id="matchTournament" name="tournamentId" required></select></label><label>Match Number<input name="matchNumber" type="number" min="1" required></label><label>Room ID<input name="roomId"></label><label>Room Password<input name="roomPassword"></label><label>Start Time<input name="startAt" type="datetime-local"></label><button class="btn primary full" type="submit">Create Match</button></form></div>
+          <div class="admin-card"><h2>Matches</h2><div id="matchesList" class="list"></div></div>
+        </div>
+      </section>
+
+      <section id="section-results" class="admin-section">
+        <div class="admin-card"><h2>Enter Match Results</h2><p class="muted">Add one or more player result rows, then save them together.</p><form id="resultForm"><label>Match<select id="resultMatch" required></select></label><div id="resultRows" class="result-rows"></div><div class="button-row"><button type="button" id="addResultRow" class="btn secondary">+ Add Player</button><button type="submit" class="btn primary">Save Results</button></div></form><div id="resultMessage" class="admin-message"></div></div>
+      </section>
+
+      <section id="section-reviews" class="admin-section">
+        <div class="section-head"><div><h2>Reviews</h2><p>Moderate player reviews before they appear publicly.</p></div><select id="reviewFilter"><option value="ALL">All</option><option value="PENDING">Pending</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select></div>
+        <div id="reviewsList" class="review-list"></div>
+      </section>
+
+      <section id="section-staff" class="admin-section">
+        <div class="admin-grid-2">
+          <div class="admin-card"><h2>Add Staff</h2><form id="staffForm" class="form-grid"><label>Username<input name="username" required></label><label>Password<input name="password" type="password" minlength="8" required></label><label>Role<select name="role"><option>TOURNAMENT_MANAGER</option><option>RESULTS_MANAGER</option><option>MODERATOR</option><option>SUPPORT</option><option>OWNER</option></select></label><button class="btn primary full" type="submit">Create Staff Account</button></form></div>
+          <div class="admin-card"><h2>Staff Accounts</h2><div id="staffList" class="list"></div></div>
+        </div>
+      </section>
+
+      <section id="section-audit" class="admin-section">
+        <div class="section-head"><div><h2>Audit Logs</h2><p>Recent administrative actions.</p></div><button id="refreshAudit" class="btn secondary">Refresh</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th><th>ID</th><th>Details</th></tr></thead><tbody id="auditTable"></tbody></table></div>
+      </section>
+    </main>
+  </div>
+  <script src="/admin.js"></script>
+</body>
+</html>
