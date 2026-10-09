@@ -1,1 +1,0 @@
-f.onsubmit=async e=>{e.preventDefault();let r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})}),d=await r.json();if(d.ok)location.href='/player.html';else m.textContent=d.error}
