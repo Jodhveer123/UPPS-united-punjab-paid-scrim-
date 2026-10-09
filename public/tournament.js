@@ -68,13 +68,17 @@ fetch("/api/tournaments/" + encodeURIComponent(id))
 
           <li>
             Only if you pay the entry fees on qr code which you see on register page registration gives you
-            an eligible, and you get confirmed slot all info come in your whatsapp number or on your player page and you get the room id and pass and other all info.but if this tournament free of entry fees you can skip this payment.
+            an eligible, and you get confirmed slot all info come in your whatsapp number or on 
+            your player page and you get the room id and pass and other all info.but if this tournament free of entry 
+            fees you can skip this payment.
           </li>
         </ol>
 
         <p class="warning-note">
           <b>Important:</b>
-          Registering does not automatically make you eligible to play if you pay then we check and alot you slot but if tournamnet fees free then you eligible automaticaly without payment for any help contack our help centre.
+          Registering does not automatically make you eligible to play if you
+          pay then we check and alot you slot but if tournamnet fees free then you
+          eligible automaticaly without payment for any help contack our help centre.
         </p>
 
       </section>
