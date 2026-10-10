@@ -1,64 +1,207 @@
+
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>UPPS — United Punjab Paid Scrim Tournaments</title>
-<link rel="stylesheet" href="/styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131c">
+  <meta name="description" content="Join UPPS for organized Free Fire solo, duo and squad tournaments. Register, check room details, follow results and compete.">
+  <title>UPPS — United Punjab Paid Scrim Tournaments</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<header class="nav"><a class="logo" href="/">UPPS</a><nav><a href="/tournaments.html">Tournaments</a><a href="/login.html">Player Login</a><a class="btn small" href="/register.html">Join UPPS</a></nav></header>
+
+<header class="nav">
+  <a class="logo" href="/" aria-label="UPPS Home">UPPS</a>
+
+  <nav aria-label="Main navigation">
+    <a href="/">Home</a>
+    <a href="/tournaments.html">Tournaments</a>
+    <a href="/login.html">Player Login</a>
+    <a class="btn small" href="/register.html">Join UPPS</a>
+  </nav>
+</header>
+
 <main>
-<section class="hero">
-<div><span class="eyebrow">FREE FIRE COMMUNITY TOURNAMENTS</span><h1>Compete. Survive. <span>Win.</span></h1><p>UPPS is a tournament platform for organized solo, duo and squad scrims with registrations, verified payments, matches, results and prize records.</p><div class="actions"><a class="btn" href="/tournaments.html">View Tournaments</a><a class="btn ghost" href="/register.html">Create Account</a></div></div>
-<div class="hero-card"><div class="live-dot"></div><strong>UPPS Tournament Platform</strong><p>Public events • Player accounts • Results • Leaderboards</p></div>
-</section>
-<section><div class="section-head"><h2>Upcoming tournaments</h2><a href="/tournaments.html">View all →</a></div><div id="featured" class="cards"><div class="muted">Loading…</div></div></section>
-<section class="features"><div><b>🎮 Multiple formats</b><span>Solo, Duo and Squad events.</span></div><div><b>🧾 Verified registrations</b><span>Unique registration and payment references.</span></div><div><b>📊 Results & leaderboards</b><span>Match results and tournament scoring.</span></div></section>
-</main>
-<footer>UPPS • Community tournament platform • Not affiliated with Garena.</footer>
-<!-- UPPS Help Centre -->
-<div class="upps-help-widget">
-  <button
-    class="upps-help-button"
-    id="uppsHelpButton"
-    type="button"
-    aria-expanded="false"
-    aria-controls="uppsHelpPanel"
-  >
-    <span aria-hidden="true">💬</span> Help Centre
-  </button>
 
-  <div class="upps-help-panel" id="uppsHelpPanel" hidden>
-    <div class="upps-help-heading">
-      <div>
-        <strong>UPPS Help Centre</strong>
-        <p>How can we help you?</p>
+  <section class="hero">
+    <div>
+      <span class="eyebrow">FREE FIRE COMMUNITY TOURNAMENTS</span>
+
+      <h1>Compete. Survive. <span>Win.</span></h1>
+
+      <p>
+        Welcome to UPPS — United Punjab Paid Scrim Tournaments.
+        Discover tournaments, register your team, read the rules,
+        check your registration status and follow match results
+        through our official website.
+      </p>
+
+      <div class="actions">
+        <a class="btn" href="/tournaments.html">Explore Tournaments</a>
+        <a class="btn ghost" href="/register.html">Create Player Account</a>
       </div>
-      <button id="uppsHelpClose" type="button"
-        aria-label="Close help centre">✕</button>
+
+      <p class="muted">
+        Already registered? <a href="/login.html">Log in to your Player Account</a>.
+      </p>
     </div>
 
-    <a class="upps-help-link upps-telegram"
-       href="https://t.me/UPPSCOMUNITY"
-       target="_blank" rel="noopener noreferrer">
-      ✈️ Join us on Telegram
-    </a>
+    <div class="hero-card">
+      <div class="live-dot"></div>
+      <strong>Your Tournament. One Official Website.</strong>
+      <p>
+        Registrations • Slot status • Room details • Match updates
+        • Results • Leaderboards
+      </p>
+      <a href="/tournaments.html">Find your next tournament →</a>
+    </div>
+  </section>
 
-    <a class="upps-help-link upps-instagram"
-       href="https://www.instagram.com/upps_official_community/"
-       target="_blank" rel="noopener noreferrer">
-      📸 Follow us on Instagram
-    </a>
-
-    <div class="upps-help-link upps-whatsapp-disabled">
-      🟢 WhatsApp — link coming soon
+  <section aria-labelledby="notice-title">
+    <div class="section-head">
+      <h2 id="notice-title">Important player notice</h2>
     </div>
 
-    <p class="upps-help-footer">UPPS · United Punjab Paid Scrim Tournaments</p>
-  </div>
-</div>
+    <div class="hero-card">
+      <strong>📢 Keep checking the UPPS website</strong>
+      <p>
+        Official room details, tournament announcements, schedule
+        changes and results will be published on the website when
+        available. Do not depend only on old messages or screenshots.
+      </p>
+      <p>
+        <strong>Be punctual:</strong> Be online and ready at least
+        5 minutes before the scheduled tournament start time.
+        Follow the instructions shown for your specific tournament.
+      </p>
+      <p>
+        The Room ID and password will appear on the website when
+        the organizer releases them. Check your tournament page
+        and player dashboard.
+      </p>
+      <a class="btn small" href="/tournaments.html">Check Tournaments</a>
+    </div>
+  </section>
 
-<script src="help-centre.js" defer></script>
-</body>
+  <section aria-labelledby="upcoming-title">
+    <div class="section-head">
+      <h2 id="upcoming-title">Upcoming tournaments</h2>
+      <a href="/tournaments.html">View all tournaments →</a>
+    </div>
+
+    <div id="featured" class="cards">
+      <div class="muted">Loading tournaments…</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="steps-title">
+    <div class="section-head">
+      <h2 id="steps-title">How to participate</h2>
+    </div>
+
+    <div class="features">
+      <div>
+        <b>01. Create your account</b>
+        <span>
+          Register on UPPS with your player details and keep your
+          login information safe.
+        </span>
+        <p><a href="/register.html">Create account →</a></p>
+      </div>
+
+      <div>
+        <b>02. Choose a tournament</b>
+        <span>
+          Read the format, entry requirements, rules, schedule,
+          slots and prize information before registering.
+        </span>
+        <p><a href="/tournaments.html">Browse tournaments →</a></p>
+      </div>
+
+      <div>
+        <b>03. Check your status</b>
+        <span>
+          Log in and check your player dashboard for your
+          registration and verification status.
+        </span>
+        <p><a href="/login.html">Player login →</a></p>
+      </div>
+
+      <div>
+        <b>04. Prepare for match time</b>
+        <span>
+          Read the tournament instructions, be ready 5 minutes
+          early and check the website for room details when released.
+        </span>
+        <p><a href="/tournaments.html">View event details →</a></p>
+      </div>
+
+      <div>
+        <b>05. Follow the results</b>
+        <span>
+          Visit the tournament page for published match results,
+          standings and leaderboards.
+        </span>
+        <p><a href="/tournaments.html">View results →</a></p>
+      </div>
+
+      <div>
+        <b>Need help?</b>
+        <span>
+          If something is unclear, contact the UPPS organizers
+          before the tournament starts.
+        </span>
+        <p>
+          <a href="https://www.instagram.com/upps_official_community/"
+             target="_blank" rel="noopener noreferrer">
+            Contact UPPS on Instagram →
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div>
+      <b>🎮 Multiple formats</b>
+      <span>Solo, Duo and Squad events, depending on availability.</span>
+    </div>
+    <div>
+      <b>🧾 Registration status</b>
+      <span>Check your registration and any required verification.</span>
+    </div>
+    <div>
+      <b>📊 Results and leaderboards</b>
+      <span>See published match results and tournament standings.</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Quick navigation</h2>
+    </div>
+
+    <div class="actions">
+      <a class="btn" href="/tournaments.html">All Tournaments</a>
+      <a class="btn ghost" href="/login.html">Player Dashboard Login</a>
+      <a class="btn ghost" href="/register.html">Join UPPS</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>UPPS • United Punjab Paid Scrim Tournaments</p>
+  <p>
+    <a href="/">Home</a> ·
+    <a href="/tournaments.html">Tournaments</a> ·
+    <a href="/login.html">Player Login</a> ·
+    <a href="/register.html">Join UPPS</a>
+  </p>
+  <p>Community tournament platform • Not affiliated with Garena.</p>
+</footer>
+
 <script src="/index.js"></script>
-</body></html>
+</body>
+</html>
