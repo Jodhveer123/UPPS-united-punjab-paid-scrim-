@@ -304,3 +304,45 @@
     bottom: 14px;
   }
 }
+
+/* UPPS tournament review form */
+.review-form {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #8884;
+  border-radius: 14px;
+}
+
+.review-form h3,
+.review-form p {
+  margin: 0;
+}
+
+.review-form label {
+  font-weight: 600;
+}
+
+.review-form select,
+.review-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #8888;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.review-form textarea {
+  resize: vertical;
+}
+
+.review-form button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+#reviewFormMessage {
+  overflow-wrap: anywhere;
+}
