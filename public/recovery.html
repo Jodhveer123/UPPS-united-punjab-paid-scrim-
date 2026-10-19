@@ -25,10 +25,10 @@
         </select>
         <label for="username">Username (if remembered)</label>
         <input id="username" maxlength="30" autocomplete="username" placeholder="Your UPPS username">
-        <label for="contact">Registered email or phone (if available)</label>
-        <input id="contact" maxlength="160" autocomplete="email" placeholder="Email address or phone number">
-        <label for="playerUid">Free Fire UID (if linked)</label>
-        <input id="playerUid" inputmode="numeric" maxlength="20" placeholder="Your Free Fire UID">
+        <label for="contact">Registered Gmail address (required)</label>
+        <input id="contact" type="email" maxlength="160" autocomplete="email" placeholder="The Gmail used when registering" required>
+        <label for="playerUid">Free Fire UID (required)</label>
+        <input id="playerUid" inputmode="numeric" minlength="5" maxlength="20" pattern="[0-9]{5,20}" placeholder="Your Free Fire UID" required>
         <label for="details">Additional details (optional)</label>
         <textarea id="details" maxlength="1000" rows="4" placeholder="Anything that can help support verify your account. Do not enter your old or new password."></textarea>
         <button class="btn" id="submitBtn" type="submit">Submit recovery request</button>
