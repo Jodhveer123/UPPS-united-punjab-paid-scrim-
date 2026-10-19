@@ -82,7 +82,17 @@ function renderMatches(){
   $("#resultMatch").innerHTML=state.matches.map(m=>`<option value="${m.id}">${esc(m.title)} · Match ${esc(m.match_number)}</option>`).join("");
 }
 function playerOptions(){ return state.players.map(p=>`<option value="${p.id}">${esc(p.display_name||p.username)} · ${esc(p.free_fire_uid||p.public_id)}</option>`).join(""); }
-function addResultRow(){ const div=document.createElement("div"); div.className="result-row"; div.innerHTML=`<select class="result-player" required><option value="">Player</option>${playerOptions()}</select><input class="result-placement" type="number" min="1" placeholder="Placement" required><input class="result-kills" type="number" min="0" value="0" placeholder="Kills"><input class="result-points" type="number" min="0" value="0" placeholder="Points"><input class="result-notes" placeholder="Notes"><button type="button" class="remove-result">×</button>`; $("#resultRows").appendChild(div); }
+function addResultRow(){
+  const div=document.createElement("div");
+  div.className="result-row";
+  div.innerHTML=`<label class="result-field result-player-field"><span>Player</span><select class="result-player" required><option value="">Select player…</option>${playerOptions()}</select></label>
+    <label class="result-field"><span>Placement</span><input class="result-placement" type="number" min="1" step="1" placeholder="e.g. 1" required></label>
+    <label class="result-field"><span>Kills</span><input class="result-kills" type="number" min="0" step="1" value="0" placeholder="e.g. 5"></label>
+    <label class="result-field"><span>Points</span><input class="result-points" type="number" min="0" step="1" value="0" placeholder="e.g. 12"></label>
+    <label class="result-field result-notes-field"><span>Notes (optional)</span><input class="result-notes" placeholder="e.g. Winner / disqualified"></label>
+    <button type="button" class="remove-result" aria-label="Remove this player result" title="Remove row">×</button>`;
+  $("#resultRows").appendChild(div);
+}
 function renderReviews(){
   const f=$("#reviewFilter").value; const rows=state.reviews.filter(r=>f==="ALL"||r.status===f);
   $("#reviewsList").innerHTML=rows.map(r=>`<article class="review-card"><div class="review-head"><b>${esc(r.display_name||r.username||"Player")}</b>${pill(r.status)}</div><div class="stars">${"★".repeat(Number(r.rating||0))}${"☆".repeat(5-Number(r.rating||0))}</div><p>${esc(r.review_text||"")}</p><small>${esc(r.title||"")} · ${fmt(r.created_at)}</small><div class="button-row"><button class="btn secondary review-action" data-id="${r.id}" data-status="APPROVED">Approve</button><button class="btn danger review-action" data-id="${r.id}" data-status="REJECTED">Reject</button></div></article>`).join("")||"<div class='empty'>No reviews.</div>";
