@@ -131,7 +131,26 @@ $("#playersTable").addEventListener("click",async e=>{
 });
 $("#playersTable").addEventListener("change",async e=>{if(!e.target.classList.contains("player-status"))return;try{await api(`/api/admin/players/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadPlayers();renderPlayers();msg("Player status updated.");}catch(err){msg(err.message,true);}});
 $("#tournamentsList").addEventListener("change",async e=>{if(!e.target.classList.contains("tournament-status"))return;try{await api(`/api/admin/tournaments/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadTournaments();renderTournaments();msg("Tournament status updated.");}catch(err){msg(err.message,true);}});
-$("#registrationsTable").addEventListener("change",async e=>{if(!e.target.classList.contains("registration-status"))return;try{await api(`/api/admin/registrations/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadRegistrations();renderRegistrations();renderDashboard();msg("Registration status updated.");}catch(err){msg(err.message,true);}});
+$("#registrationsTable").addEventListener("change",async e=>{
+  if(!e.target.classList.contains("registration-status"))return;
+  const control=e.target;
+  const registration=state.registrations.find(r=>String(r.id)===String(control.dataset.id));
+  const previous=registration?.status || "PENDING";
+  const next=control.value;
+  if(next==="VERIFIED" && previous!=="VERIFIED" && !confirm("Approve this registration? This confirms the player's slot. For paid tournaments, verify payment first.")){
+    control.value=previous; return;
+  }
+  if(next==="REJECTED" && previous!=="REJECTED" && !confirm("Reject this player's registration?")){control.value=previous;return;}
+  control.disabled=true;
+  try{
+    await api(`/api/admin/registrations/${control.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:next})});
+    await loadRegistrations(); renderRegistrations(); renderDashboard();
+    msg(next==="VERIFIED"?"Registration approved. Confirm payment first for paid tournaments.":"Registration status updated.");
+  }catch(err){
+    control.value=previous;
+    msg(err.message,true);
+  }finally{control.disabled=false;}
+});
 $("#reviewsList").addEventListener("click",async e=>{const b=e.target.closest(".review-action");if(!b)return;try{await api(`/api/admin/reviews/${b.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:b.dataset.status})});await loadReviews();renderReviews();renderDashboard();msg("Review status updated.");}catch(err){msg(err.message,true);}});
 $("#staffList").addEventListener("change",async e=>{if(!e.target.classList.contains("staff-role"))return;try{await api(`/api/admin/staff/${e.target.dataset.id}/role`,{method:"PATCH",body:JSON.stringify({role:e.target.value})});await loadStaff();renderStaff();msg("Staff role updated.");}catch(err){msg(err.message,true);}});
 
