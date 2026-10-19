@@ -1425,3 +1425,181 @@ html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 50% -20%,
 
 /* Admin control center refinement */
 .admin-login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 0,#392052 0,transparent 48%),#090711}.admin-login-card{width:min(460px,100%);padding:clamp(24px,5vw,40px);border:1px solid #ffffff1c;border-radius:24px;box-shadow:0 30px 100px #0008}.admin-login-card h1{font-size:clamp(30px,5vw,42px);letter-spacing:-.05em;margin:12px 0}.admin-login-card label{display:block;color:#bdb6cf;font-size:13px;font-weight:700;margin:15px 0}.admin-login-card input{width:100%;margin-top:7px;padding:13px 14px;border-radius:11px;background:#0b0913;color:#fff;border:1px solid #393047}.admin-login-card .btn{width:100%;margin-top:14px}.admin-shell{min-height:100vh;background:#090711}.admin-sidebar{padding:24px 16px!important}.admin-brand{font-weight:950;font-size:25px;letter-spacing:1px;color:#fff;padding:12px 12px 24px}.admin-brand span{display:block;font-size:10px;letter-spacing:3px;color:#c4ff52;margin-top:2px}.admin-nav button,.admin-logout{border-radius:10px!important;text-align:left;padding:12px 14px!important;margin:3px 0;font-weight:700}.admin-logout{border:1px solid #ffffff20;background:#ffffff08;color:#fda4af;padding:11px 14px;width:calc(100% - 12px);margin:18px 6px}.admin-main{padding:clamp(18px,3vw,36px)!important;min-width:0}.admin-topbar{padding-bottom:20px;margin-bottom:22px}.admin-topbar h1{font-size:clamp(28px,4vw,40px);letter-spacing:-.04em;margin:6px 0}.stats-grid{gap:14px!important}.stat-card{padding:20px!important;border-radius:16px!important;position:relative;overflow:hidden}.stat-card span{color:#aaa3bc!important;font-size:12px!important;font-weight:700;letter-spacing:.4px}.stat-card strong{display:block;color:#c4ff52!important;font-size:clamp(25px,3vw,36px)!important;margin-top:8px}.admin-card{padding:22px!important;border-radius:17px!important}.admin-card h2{font-size:18px;margin-top:0}.admin-section{min-width:0}.admin-section .section-head{margin-top:0}.admin-section .section-head h2{font-size:24px}.admin-section input,.admin-section select,.admin-section textarea{max-width:100%;background:#0b0913;color:#f5f2ff;border:1px solid #393047;border-radius:10px;padding:11px}.admin-section .btn,.admin-section button{border-radius:9px}.list-item{border-bottom:1px solid #ffffff12;padding:12px 0}.list-item span{color:#aaa3bc}.admin-identity{color:#c4ff52;background:#c4ff5210;border:1px solid #c4ff5230;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800}.admin-message{margin:12px 0}.admin-section .panel,.admin-section .card{background:#141120}.admin-section label{color:#c7bfd5}
+
+
+/* UPPS registration / QR modal — premium dark esports styling */
+#registrationModal.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(3, 3, 10, .84);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-sizing: border-box;
+}
+
+#registrationModal .modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: auto;
+  padding: 30px;
+  box-sizing: border-box;
+  color: #f4f0ff;
+  background: linear-gradient(155deg, #171225 0%, #0d0b16 72%);
+  border: 1px solid rgba(174, 105, 255, .38);
+  border-radius: 22px;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, .62), 0 0 35px rgba(133, 65, 255, .13);
+}
+
+#registrationModal .modal-card h2 {
+  margin: 8px 34px 12px 0;
+  color: #f8f5ff;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  line-height: 1.2;
+}
+
+#registrationModal .modal-card h3 {
+  margin: 0 0 10px;
+  color: #e9d8ff;
+}
+
+#registrationModal .modal-card p,
+#registrationModal .modal-card li {
+  color: #c8bfdc;
+  line-height: 1.65;
+}
+
+#registrationModal .modal-card b {
+  color: #fff;
+}
+
+#registrationModal .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  color: #f5edff;
+  background: rgba(255,255,255,.06);
+  font-size: 27px;
+  cursor: pointer;
+}
+
+#registrationModal .modal-close:hover {
+  background: rgba(151, 74, 255, .22);
+}
+
+#registrationModal .modal-icon {
+  color: #c58bff;
+  font-size: 38px;
+}
+
+#registrationModal .modal-status {
+  padding: 6px 16px;
+  margin: 18px 0;
+  color: #f4f0ff;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(174, 105, 255, .2);
+  border-radius: 14px;
+}
+
+#registrationModal .modal-status div {
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom-color: rgba(255,255,255,.09);
+}
+
+#registrationModal .modal-status div span {
+  color: #a99bbd;
+}
+
+#registrationModal .whatsapp-section {
+  margin-top: 20px;
+  padding: 20px;
+  text-align: center;
+  background: linear-gradient(145deg, rgba(139, 67, 255, .11), rgba(255,255,255,.025));
+  border: 1px solid rgba(174, 105, 255, .28);
+  border-radius: 17px;
+}
+
+#registrationModal .whatsapp-section p {
+  margin: 8px 0 14px;
+}
+
+#registrationModal .whatsapp-qr {
+  display: block;
+  width: min(240px, 100%);
+  max-width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  margin: 18px auto;
+  padding: 9px;
+  background: #fff;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  object-fit: contain;
+}
+
+#registrationModal .modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+#registrationModal .modal-actions .btn,
+#registrationModal .whatsapp-section .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+#registrationModal .modal-card::-webkit-scrollbar {
+  width: 7px;
+}
+#registrationModal .modal-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+#registrationModal .modal-card::-webkit-scrollbar-thumb {
+  background: rgba(181, 133, 255, .48);
+  border-radius: 10px;
+}
+
+@media (max-width: 600px) {
+  #registrationModal.modal-backdrop {
+    align-items: flex-end;
+    padding: 10px;
+  }
+  #registrationModal .modal-card {
+    max-height: calc(100dvh - 20px);
+    padding: 24px 18px 18px;
+    border-radius: 20px;
+  }
+  #registrationModal .whatsapp-section {
+    padding: 15px 12px;
+  }
+  #registrationModal .modal-actions {
+    flex-direction: column;
+  }
+  #registrationModal .modal-actions .btn,
+  #registrationModal .whatsapp-section .btn {
+    width: 100%;
+  }
+}
