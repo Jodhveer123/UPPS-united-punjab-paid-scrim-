@@ -300,7 +300,7 @@ function showRegistrationModal(registration, alreadyRegistered) {
 
       <div class="whatsapp-section">
         <h3>Payment instructions</h3>
-        <p class="muted">For paid tournaments, follow the organizer's payment instructions. Free tournaments do not require payment. Contact the Help Centre if you need help.</p>
+        <p class="muted">For paid tournaments, follow the organizer's payment instructions. Free tournaments do not require payment.also when do payment write your free fire uid to check its you. Contact the Help Centre if you need help.</p>
 
         <img src="qr.jpg" alt="UPPS payment QR Code" class="whatsapp-qr">
 
