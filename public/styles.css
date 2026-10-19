@@ -1283,3 +1283,133 @@ footer { color: #9aa4bd; }
 .recovery-box .msg{overflow-wrap:anywhere;line-height:1.5}
 .recovery-box .msg.success{color:#86efac}
 .recovery-box button:disabled{opacity:.65;cursor:wait}
+
+
+/* ===== ADMIN DASHBOARD THEME FIX ===== */
+/* Scope dashboard styles so global public-page rules cannot override them. */
+html:has(body.admin-body),
+body.admin-body {
+  min-height: 100%;
+  background: #070912 !important;
+  color: #eef2ff !important;
+}
+body.admin-body {
+  margin: 0;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(124,58,237,.13), transparent 34rem),
+    radial-gradient(ellipse at 92% 18%, rgba(34,211,238,.06), transparent 30rem),
+    #070912 !important;
+}
+.admin-body .admin-shell { min-height: 100vh; color: #eef2ff; }
+.admin-body .admin-sidebar {
+  background: #0b0e19;
+  border-right: 1px solid rgba(148,163,184,.16);
+  box-shadow: 10px 0 35px rgba(0,0,0,.16);
+}
+.admin-body .admin-main { background: transparent; color: #eef2ff; }
+.admin-body .admin-topbar { border-bottom: 1px solid rgba(148,163,184,.16); padding-bottom: 18px; }
+.admin-body .admin-topbar h1,
+.admin-body .admin-section h2,
+.admin-body .admin-card h2,
+.admin-body .section-head h2 { color: #f8f7ff !important; }
+.admin-body .muted,
+.admin-body .table-wrap small,
+.admin-body .entity-card small,
+.admin-body .list-item span { color: #aab3c8 !important; }
+.admin-body .admin-identity { color: #d8ccff; }
+.admin-body .eyebrow { color: #a78bfa !important; }
+.admin-body .stat-card,
+.admin-body .admin-card,
+.admin-body .review-card,
+.admin-body .table-wrap,
+.admin-body .empty {
+  background: linear-gradient(145deg, #131729 0%, #0c101d 100%) !important;
+  color: #eef2ff !important;
+  border: 1px solid rgba(148,163,184,.19) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.025);
+}
+.admin-body .stat-card span { color: #aab3c8 !important; }
+.admin-body .stat-card strong { color: #f8f7ff; }
+.admin-body .list-item,
+.admin-body .entity-card { background: rgba(255,255,255,.025); border-color: rgba(148,163,184,.16); }
+.admin-body .admin-nav button { color: #cbd2e4; transition: background .15s ease, color .15s ease; }
+.admin-body .admin-nav button:hover,
+.admin-body .admin-nav button.active { background: linear-gradient(90deg, #38216b, #21183f); color: #fff; }
+.admin-body .admin-logout { border: 1px solid rgba(148,163,184,.16); }
+.admin-body .admin-logout:hover { background: #252039; }
+.admin-body input:not([type="checkbox"]):not([type="radio"]),
+.admin-body select,
+.admin-body textarea,
+.admin-body #resultForm select,
+.admin-body .result-row input,
+.admin-body .result-row select {
+  color: #f4f5ff !important;
+  background: #090d18 !important;
+  border: 1px solid #30394f !important;
+  border-radius: 9px;
+  outline: none;
+}
+.admin-body input::placeholder,
+.admin-body textarea::placeholder { color: #7f89a3 !important; opacity: 1; }
+.admin-body input:focus,
+.admin-body select:focus,
+.admin-body textarea:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139,92,246,.16);
+}
+.admin-body input[type="checkbox"],
+.admin-body input[type="radio"] { accent-color: #8b5cf6; }
+.admin-body .btn.primary { background: linear-gradient(135deg,#8b5cf6,#6d28d9); color: #fff; }
+.admin-body .btn.secondary { background: #171b2b; color: #e7eaff; border: 1px solid #353d53; }
+.admin-body .btn.danger { background: #2a151f; color: #fda4af; border: 1px solid #65303d; }
+.admin-body .btn:hover { filter: brightness(1.1); }
+.admin-body .table-wrap table { background: transparent; color: #e5e7eb; }
+.admin-body .table-wrap th { background: #191d30 !important; color: #c9cde0 !important; border-color: rgba(148,163,184,.16); }
+.admin-body .table-wrap td { background: #0e1220 !important; color: #e0e5f3 !important; border-color: rgba(148,163,184,.13) !important; }
+.admin-body .table-wrap tr:hover td { background: #14192a !important; }
+.admin-body .table-wrap select,
+.admin-body .entity-actions select,
+.admin-body .staff-role { max-width: 100%; }
+.admin-body .status-pill { background: #252b3d; color: #e3e8f7; }
+.admin-body .status-pill.pending { background: #3a2b16; color: #fcd34d; }
+.admin-body .status-pill.verified,
+.admin-body .status-pill.approved,
+.admin-body .status-pill.active { background: #123629; color: #86efac; }
+.admin-body .status-pill.rejected,
+.admin-body .status-pill.banned { background: #3b1d28; color: #fda4af; }
+.admin-body .status-pill.waitlisted { background: #1d2b4b; color: #bfdbfe; }
+.admin-body .status-pill.live { background: #3b1d3c; color: #f5d0fe; }
+.admin-body .status-pill.owner { background: #30204f; color: #ddd6fe; }
+.admin-body .admin-login-wrap {
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(124,58,237,.22), transparent 32rem),
+    #070912;
+}
+.admin-body .admin-login-card {
+  background: linear-gradient(145deg, #151a2d, #0b0e19) !important;
+  color: #eef2ff !important;
+  border: 1px solid rgba(168,85,247,.35) !important;
+}
+.admin-body .admin-login-card label { color: #dfe3f2; }
+.admin-body .admin-login-card input { width: 100%; }
+.admin-body .admin-message { color: #c4b5fd; }
+.admin-body .admin-message.success { color: #86efac; }
+.admin-body .admin-message.error { color: #fda4af; }
+.admin-body .review-card p { color: #d5daea; }
+.admin-body .stars { color: #c4b5fd; }
+.admin-body .remove-result { background: #3b1d28; color: #fda4af; }
+.admin-body code { overflow-wrap: anywhere; color: #d8ccff; }
+@media (max-width: 800px) {
+  .admin-body .admin-sidebar { border-right: 0; border-bottom: 1px solid rgba(148,163,184,.16); }
+  .admin-body .admin-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .admin-body .admin-topbar { align-items: flex-start; flex-direction: column; }
+  .admin-body .result-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .admin-body .admin-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-body .admin-main { padding: 14px; }
+  .admin-body .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .admin-body .stat-card, .admin-body .admin-card { padding: 14px; }
+  .admin-body .list-item, .admin-body .entity-card { align-items: flex-start; flex-direction: column; }
+}
