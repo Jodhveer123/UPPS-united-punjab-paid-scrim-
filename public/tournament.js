@@ -209,41 +209,49 @@ async function submitReview(event) {
 ========================================================= */
 
 async function openRegistrationWindow() {
-  const authCheck = await fetch("/api/auth/me");
-
-  if (authCheck.status === 401) {
-    location.href = "/login.html";
-    return;
+  const registerButton = document.getElementById("registerBtn");
+  if (registerButton) {
+    if (registerButton.dataset.checking === "true") return;
+    registerButton.dataset.checking = "true";
+    registerButton.disabled = true;
+    registerButton.dataset.originalText = registerButton.textContent;
+    registerButton.textContent = "Checking account…";
   }
 
-  if (!authCheck.ok) {
-    alert("Could not verify your account.");
-    return;
-  }
+  try {
+    const authCheck = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+    if (authCheck.status === 401) {
+      location.href = "/login.html";
+      return;
+    }
+    if (!authCheck.ok) throw new Error("Could not verify your account. Please try again.");
 
-  const r = await fetch(
-    "/api/tournaments/" + encodeURIComponent(id) + "/registration"
-  );
+    const response = await fetch(
+      "/api/tournaments/" + encodeURIComponent(id) + "/registration",
+      { credentials: "same-origin", cache: "no-store" }
+    );
+    if (response.status === 401) {
+      location.href = "/login.html";
+      return;
+    }
 
-  if (r.status === 401) {
-    location.href = "/login.html";
-    return;
-  }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "Could not check your registration. Please try again.");
+    }
 
-  const d = await r.json();
-
-  if (!d.ok) {
-    alert(d.error || "Could not check registration.");
-    return;
-  }
-
-  if (d.registered) {
-    showRegistrationModal(d.registration, true);
-  } else {
-    showRegistrationModal(null, false);
+    if (data.registered) showRegistrationModal(data.registration, true);
+    else showRegistrationModal(null, false);
+  } catch (error) {
+    alert(error.message || "Network error while checking registration. Please try again.");
+  } finally {
+    if (registerButton) {
+      registerButton.disabled = false;
+      registerButton.dataset.checking = "false";
+      registerButton.textContent = registerButton.dataset.originalText || "Register";
+    }
   }
 }
-
 
 /* =========================================================
    REGISTRATION MODAL
