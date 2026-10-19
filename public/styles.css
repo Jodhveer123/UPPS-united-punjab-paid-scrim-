@@ -475,3 +475,40 @@ footer a:hover,
     padding: 18px;
   }
 }
+
+
+/* Fix invisible text on outlined/ghost buttons on light backgrounds */
+a.btn,
+button.btn {
+  color: #ffffff;
+}
+
+.btn.ghost,
+a.btn.ghost,
+button.btn.ghost {
+  background: #ffffff;
+  color: #273044;
+  border: 1px solid #596275;
+}
+
+.btn.ghost:hover,
+a.btn.ghost:hover,
+button.btn.ghost:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.btn.secondary,
+a.btn.secondary,
+button.btn.secondary {
+  background: #ffffff;
+  color: #273044;
+  border: 1px solid #ccd2df;
+}
+
+.btn:focus-visible,
+a.btn:focus-visible,
+button.btn:focus-visible {
+  outline: 3px solid #c4b5fd;
+  outline-offset: 3px;
+}
