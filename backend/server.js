@@ -2257,6 +2257,21 @@ app.get(
   }
 );
 
+app.patch("/api/admin/players/:id/username", auth("ADMIN"), async (req, res) => {
+  const username = String((req.body || {}).username || "").trim();
+  if (!/^[A-Za-z0-9_.-]{3,30}$/.test(username)) return sendError(res, 400, "Username must be 3–30 characters using letters, numbers, dots, underscores or hyphens.");
+  try {
+    const r = await query("UPDATE players SET username=$1, updated_at=NOW() WHERE id=$2 RETURNING id, username, email, free_fire_uid", [username, req.params.id]);
+    if (!r.rowCount) return sendError(res, 404, "Player account not found.");
+    await audit("ADMIN", req.auth.id, "PLAYER_USERNAME_CHANGE", "PLAYER", r.rows[0].id, { username });
+    res.json({ ok: true, player: r.rows[0], message: "Username changed. Inform the player using their registered Gmail." });
+  } catch (e) {
+    if (e.code === "23505") return sendError(res, 409, "That username is already taken.");
+    console.error(e);
+    sendError(res, 500, "Could not change player username.");
+  }
+});
+
 app.post("/api/admin/players/:id/password", auth("ADMIN"), async (req, res) => {
   const password = String((req.body || {}).password || "");
   if (password.length < 8) return sendError(res, 400, "New password must be at least 8 characters.");
