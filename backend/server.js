@@ -426,16 +426,16 @@ app.post(
       phone
     } = req.body || {};
 
-    if (
-      !username ||
-      !displayName ||
-      !password
-    ) {
-      return sendError(
-        res,
-        400,
-        "Username, display name and password are required."
-      );
+    if (!username || !displayName || !password || !email || !freeFireUid) {
+      return sendError(res, 400, "Username, display name, Gmail address, Free Fire UID and password are required.");
+    }
+
+    if (!/^[^\\s@]+@gmail\\.com$/i.test(String(email).trim())) {
+      return sendError(res, 400, "Please enter a valid Gmail address ending in @gmail.com.");
+    }
+
+    if (!/^[0-9]{5,20}$/.test(String(freeFireUid))) {
+      return sendError(res, 400, "Enter a valid Free Fire UID (5–20 digits).");
     }
 
     if (
@@ -483,8 +483,8 @@ app.post(
         `,
         [
           username,
-          email || "",
-          freeFireUid || ""
+          String(email).trim().toLowerCase(),
+          String(freeFireUid)
         ]
       );
 
@@ -534,8 +534,8 @@ app.post(
           username,
           passwordHash,
           displayName,
-          freeFireUid || null,
-          email || null,
+          String(freeFireUid),
+          String(email).trim().toLowerCase(),
           phone || null
         ]
       );
@@ -2256,6 +2256,21 @@ app.get(
     });
   }
 );
+
+app.post("/api/admin/players/:id/password", auth("ADMIN"), async (req, res) => {
+  const password = String((req.body || {}).password || "");
+  if (password.length < 8) return sendError(res, 400, "New password must be at least 8 characters.");
+  try {
+    const hash = await bcrypt.hash(password, 12);
+    const r = await query("UPDATE players SET password_hash=$1, updated_at=NOW() WHERE id=$2 RETURNING id, username, email, free_fire_uid", [hash, req.params.id]);
+    if (!r.rowCount) return sendError(res, 404, "Player account not found.");
+    await audit("ADMIN", req.auth.id, "PLAYER_PASSWORD_RESET", "PLAYER", r.rows[0].id, { username: r.rows[0].username });
+    res.json({ ok: true, player: r.rows[0], message: "Password changed. Contact the player through their registered Gmail and share the new password securely." });
+  } catch (e) {
+    console.error(e);
+    sendError(res, 500, "Could not reset player password.");
+  }
+});
 
 app.patch(
   "/api/admin/players/:id/status",
