@@ -1271,3 +1271,15 @@ footer { color: #9aa4bd; }
   .authbox, .admin-login-card { border-radius: 20px; }
   .authbox form .btn, .admin-login-card .btn { width: 100%; min-height: 48px; }
 }
+
+/* UPPS account recovery */
+.recovery-box{background:linear-gradient(160deg,#111827,#0d1220);color:#eef2ff;border:1px solid #332653;box-shadow:0 20px 70px #0008}
+.recovery-box .muted{color:#aab3c5;line-height:1.6}
+.recovery-box label{display:block;margin:14px 0 6px;font-size:13px;font-weight:700;color:#d8dced}
+.recovery-box input,.recovery-box select,.recovery-box textarea{background:#080b12;color:#f8fafc;border:1px solid #333b50}
+.recovery-box input:focus,.recovery-box select:focus,.recovery-box textarea:focus{outline:2px solid #8b5cf6;outline-offset:1px}
+.recovery-box a:not(.logo){color:#c4b5fd}
+.recovery-warning{padding:13px;border:1px solid #59421c;background:#241b0b;color:#fcdca0;border-radius:12px;font-size:13px;line-height:1.55;margin:18px 0}
+.recovery-box .msg{overflow-wrap:anywhere;line-height:1.5}
+.recovery-box .msg.success{color:#86efac}
+.recovery-box button:disabled{opacity:.65;cursor:wait}
