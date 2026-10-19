@@ -703,6 +703,82 @@ app.get(
 );
 
 /* =========================================================
+   ACCOUNT RECOVERY REQUESTS (manual verification; no email service)
+========================================================= */
+app.post("/api/auth/recovery/request", async (req, res) => {
+  const { requestType, username, contact, playerUid, details } = req.body || {};
+  const type = String(requestType || "").toUpperCase();
+  const safeUsername = String(username || "").trim().slice(0, 30);
+  const safeContact = String(contact || "").trim().slice(0, 160);
+  const safeUid = String(playerUid || "").trim().slice(0, 30);
+  const safeDetails = String(details || "").trim().slice(0, 1000);
+
+  if (!["USERNAME", "PASSWORD", "BOTH"].includes(type)) {
+    return sendError(res, 400, "Choose a valid recovery request type.");
+  }
+  if (!safeUsername && !safeContact && !safeUid) {
+    return sendError(res, 400, "Enter at least one account detail so support can investigate.");
+  }
+  if (safeUid && !/^[0-9]{5,20}$/.test(safeUid)) {
+    return sendError(res, 400, "Free Fire UID must contain 5–20 digits.");
+  }
+
+  try {
+    await query(
+      `INSERT INTO account_recovery_requests
+       (request_type, username, contact, player_uid, details, status, created_at)
+       VALUES ($1,$2,$3,$4,$5,'OPEN',NOW())`,
+      [type, safeUsername || null, safeContact || null, safeUid || null, safeDetails || null]
+    );
+    // Generic response prevents the endpoint from confirming whether an account exists.
+    return res.status(202).json({
+      ok: true,
+      message: "If you supplied enough information, your request has been recorded. UPPS support must verify ownership before any account details or password changes are provided."
+    });
+  } catch (e) {
+    console.error("Recovery request error:", e.message);
+    return sendError(res, 500, "Could not submit the request right now. Please try again later.");
+  }
+});
+
+app.get("/api/admin/recovery-requests", auth("ADMIN"), async (_req, res) => {
+  try {
+    const r = await query(
+      `SELECT id, request_type, username, contact, player_uid, details, status, created_at
+       FROM account_recovery_requests
+       WHERE status='OPEN'
+       ORDER BY created_at ASC
+       LIMIT 100`
+    );
+    res.json({ ok: true, requests: r.rows });
+  } catch (e) {
+    console.error("Recovery request list error:", e.message);
+    sendError(res, 500, "Could not load recovery requests.");
+  }
+});
+
+app.post("/api/admin/recovery-requests/:id/close", auth("ADMIN"), async (req, res) => {
+  const requestId = Number(req.params.id);
+  if (!Number.isSafeInteger(requestId) || requestId < 1) {
+    return sendError(res, 400, "Invalid request ID.");
+  }
+  try {
+    const r = await query(
+      `UPDATE account_recovery_requests
+       SET status='CLOSED', closed_at=NOW()
+       WHERE id=$1 AND status='OPEN'
+       RETURNING id`,
+      [requestId]
+    );
+    if (!r.rowCount) return sendError(res, 404, "Open request not found.");
+    res.json({ ok: true, message: "Request marked closed." });
+  } catch (e) {
+    console.error("Recovery request close error:", e.message);
+    sendError(res, 500, "Could not close recovery request.");
+  }
+});
+
+/* =========================================================
    PLAYER PROFILE
 ========================================================= */
 
