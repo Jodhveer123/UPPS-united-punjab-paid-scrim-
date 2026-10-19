@@ -125,3 +125,19 @@ CREATE INDEX IF NOT EXISTS idx_reg_player ON registrations(player_id);
 CREATE INDEX IF NOT EXISTS idx_results_player ON results(player_id);
 CREATE INDEX IF NOT EXISTS idx_results_match ON results(match_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_tournament ON reviews(tournament_id);
+
+
+-- Manual account-recovery requests. No password/reset token is stored here.
+CREATE TABLE IF NOT EXISTS account_recovery_requests (
+  id BIGSERIAL PRIMARY KEY,
+  request_type TEXT NOT NULL CHECK (request_type IN ('USERNAME','PASSWORD','BOTH')),
+  username TEXT,
+  contact TEXT,
+  player_uid TEXT,
+  details TEXT,
+  status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN','CLOSED')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  closed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_account_recovery_status_created
+  ON account_recovery_requests(status, created_at);
