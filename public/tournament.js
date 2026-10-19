@@ -441,10 +441,10 @@ function showSubmittedModal(registration) {
       <div class="whatsapp-section">
         <h3>Join our WhatsApp group</h3>
         <p class="muted">
-          You can join the official UPPS WhatsApp group. Your registration still requires organizer verification.
+          You can pay match fees on this qr. If tournament is free of fees then you skip it. Your registration will checked and also payment if entry fees needed. It requires organizer verification.
         </p>
 
-        <img src="/assets/qr.jpg" alt="UPPS WhatsApp Group QR Code" class="whatsapp-qr">
+        <img src="qr.jpg" alt="payment QR Code" class="whatsapp-qr">
 
         <a href="#" id="whatsappJoinBtn" class="btn">Join WhatsApp Group</a>
       </div>
