@@ -1181,3 +1181,93 @@ footer {
   .hero::after, .hero h1 span, .hero-card { animation: none !important; }
   .quick-link-card::before, .card::before { display: none; }
 }
+
+
+/* ===== CONSISTENT DARK THEME ACROSS ALL PAGES ===== */
+/* Some page-specific styles (notably rules.html) used white cards.
+   These shared overrides keep the same neon arena look site-wide. */
+html, body { background-color: #05060b; color: #eef2ff; }
+body:not(.admin-body) {
+  color: #eef2ff;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(124,58,237,.14), transparent 34rem),
+    radial-gradient(ellipse at 92% 20%, rgba(34,211,238,.07), transparent 32rem),
+    #05060b;
+}
+main, main.container, .container, .auth {
+  color: #eef2ff;
+}
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(ellipse at 20% 15%, rgba(124,58,237,.2), transparent 30rem),
+    radial-gradient(ellipse at 85% 80%, rgba(34,211,238,.08), transparent 26rem),
+    #05060b;
+}
+.authbox, .admin-login-card {
+  width: min(100%, 470px);
+  padding: clamp(22px, 5vw, 38px);
+  border: 1px solid rgba(168,85,247,.35);
+  border-radius: 22px;
+  color: #f4f5ff;
+  background: linear-gradient(145deg, rgba(19,22,40,.98), rgba(8,10,19,.98));
+  box-shadow: 0 24px 80px rgba(0,0,0,.48), 0 0 36px rgba(124,58,237,.1), inset 0 1px rgba(255,255,255,.05);
+}
+.authbox h1, .admin-login-card h1 { color: #fff; }
+.authbox p, .admin-login-card p, .muted { color: #aeb6ce; }
+.authbox a:not(.btn), .admin-login-card a:not(.btn) { color: #c4b5fd; }
+.authbox form, .admin-login-card form { display: grid; gap: 13px; }
+.authbox input, .admin-login-card input,
+input:not([type="checkbox"]):not([type="radio"]),
+select, textarea {
+  color: #f4f5ff;
+  background: #0b0e19;
+  border: 1px solid rgba(148,163,184,.3);
+}
+input::placeholder, textarea::placeholder { color: #7f89a3; opacity: 1; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168,85,247,.18);
+}
+.card, .panel, .rule-card, .rules-intro, .quick-link-card,
+.features > div, .authbox, .admin-login-card {
+  background: linear-gradient(145deg, #121526 0%, #0b0e18 100%) !important;
+  color: #eef2ff !important;
+  border-color: rgba(148,163,184,.2) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.035);
+}
+.card h1, .card h2, .card h3, .panel h1, .panel h2, .panel h3,
+.rule-card h2, .rule-card h3, .rules-intro h1, .quick-link-card strong,
+.features > div b, .authbox h1, .admin-login-card h1 {
+  color: #f8f7ff !important;
+}
+.card p, .card li, .panel p, .panel li, .rule-card p, .rule-card li,
+.quick-link-card > span:not(.quick-link-icon), .features > div span,
+.authbox .muted, .admin-login-card .muted {
+  color: #b7bfd4 !important;
+}
+.rule-card a, .card a:not(.btn), .panel a:not(.btn) { color: #c4b5fd; }
+.rules-note {
+  background: rgba(124,58,237,.13) !important;
+  color: #e9ddff !important;
+  border-left-color: #a855f7 !important;
+}
+.rules-note p, .rules-note li { color: #e0d7f5 !important; }
+.section-head h1, .section-head h2, .page-title h1, main h1, main h2 { color: #f5f3ff; }
+.section-head p, .page-title p { color: #aeb6ce; }
+#app, #list, #featured { color: #eef2ff; }
+.msg, .admin-message { color: #d8ccff; }
+table { color: #eef2ff; }
+th { background: #171a2b; color: #f5f3ff; }
+td { background: #0d101b; color: #cbd2e4; border-color: rgba(148,163,184,.16); }
+hr { border-color: rgba(148,163,184,.2); }
+footer { color: #9aa4bd; }
+@media (max-width: 700px) {
+  .auth { padding: 16px 12px; }
+  .authbox, .admin-login-card { border-radius: 20px; }
+  .authbox form .btn, .admin-login-card .btn { width: 100%; min-height: 48px; }
+}
