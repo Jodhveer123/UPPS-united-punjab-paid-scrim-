@@ -691,3 +691,135 @@ footer a:hover { color: #c4b5fd; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* Mobile usability pass: larger tap targets, better spacing, no sideways overflow */
+*, *::before, *::after { box-sizing: border-box; }
+html { width: 100%; overflow-x: clip; -webkit-text-size-adjust: 100%; }
+body { width: 100%; min-width: 0; overflow-x: clip; }
+img, video, iframe, canvas, svg { max-width: 100%; }
+input, select, textarea, button { max-width: 100%; font: inherit; }
+a, button, input, select, textarea { touch-action: manipulation; }
+a, button { -webkit-tap-highlight-color: rgba(139,92,246,.16); }
+button, .btn { min-height: 44px; }
+input, select, textarea { min-height: 44px; }
+:focus-visible { outline: 3px solid #8b5cf6; outline-offset: 3px; }
+
+@media (max-width: 600px) {
+  body { font-size: 15px; line-height: 1.6; }
+  .nav {
+    position: relative;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .logo { font-size: 24px; }
+  .nav nav {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 3px 1px 8px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav nav > a:not(.btn) {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  .nav nav .btn,
+  .nav nav button {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 9px 13px;
+  }
+  main { min-width: 0; }
+  main.container,
+  .container {
+    width: calc(100% - 24px);
+    max-width: 100%;
+    padding: 18px 0 30px;
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    gap: 24px;
+    padding: 42px 20px;
+  }
+  .hero h1 {
+    max-width: 100%;
+    font-size: clamp(38px, 10.5vw, 54px);
+    line-height: 1.02;
+    letter-spacing: -1.5px;
+    overflow-wrap: anywhere;
+  }
+  .hero > div, .hero-card { min-width: 0; }
+  .hero > div:first-child > p { font-size: 15px; line-height: 1.7; }
+  .hero .actions, .actions {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .actions > .btn,
+  .actions > a,
+  .actions > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 46px;
+    max-width: 100%;
+    white-space: normal;
+  }
+  .hero-card { padding: 18px; border-radius: 16px; }
+  .quick-links { padding: 36px 16px; }
+  .quick-links-heading { text-align: left; margin-bottom: 20px; }
+  .quick-links-grid { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .quick-link-card {
+    display: grid;
+    grid-template-columns: 44px minmax(0,1fr);
+    column-gap: 13px;
+    align-items: start;
+    min-height: 0;
+    padding: 16px;
+    border-radius: 15px;
+  }
+  .quick-link-icon { grid-row: 1 / span 3; margin: 0; }
+  .quick-link-card strong { align-self: end; }
+  .quick-link-card > span:not(.quick-link-icon) { margin-top: 3px; }
+  .quick-link-card > b { padding-top: 8px; }
+  .cards { grid-template-columns: minmax(0,1fr) !important; gap: 13px; }
+  .card, .panel, .features > div { min-width: 0; padding: 17px; }
+  .features { display: grid; grid-template-columns: minmax(0,1fr) !important; gap: 12px; }
+  .section-head { align-items: flex-start; }
+  .section-head h2, h2 { overflow-wrap: anywhere; }
+  .rules-wrap { width: 100%; margin: 18px auto; padding: 0 12px 30px; }
+  .rules-intro, .rule-card { padding: 17px; border-radius: 14px; }
+  .rule-card li { padding-left: 2px; }
+  .review-form { padding: 14px; }
+  .review-form textarea { min-height: 110px; }
+  table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  footer { padding: 22px 14px; overflow-wrap: anywhere; }
+  .upps-help-widget { right: 12px; bottom: 12px; max-width: calc(100vw - 24px); }
+}
+
+@media (max-width: 380px) {
+  .hero { padding: 34px 16px; }
+  .hero h1 { font-size: clamp(34px, 10vw, 42px); }
+  .btn, a.btn, button.btn { padding: 10px 12px; font-size: 14px; }
+  .quick-link-card { padding: 14px; }
+}
+
+/* Respect devices that prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
