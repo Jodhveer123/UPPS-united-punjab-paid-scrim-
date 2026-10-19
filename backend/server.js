@@ -724,6 +724,23 @@ app.post("/api/auth/recovery/request", async (req, res) => {
   }
 
   try {
+    // Vercel imports this app as a serverless function, so initDb() may not run.
+    // Ensure the recovery table exists before accepting the first request.
+    await query(`
+      CREATE TABLE IF NOT EXISTS account_recovery_requests (
+        id BIGSERIAL PRIMARY KEY,
+        request_type TEXT NOT NULL CHECK (request_type IN ('USERNAME','PASSWORD','BOTH')),
+        username TEXT,
+        contact TEXT,
+        player_uid TEXT,
+        details TEXT,
+        status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN','CLOSED')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        closed_at TIMESTAMPTZ
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_account_recovery_status_created
+      ON account_recovery_requests(status, created_at)`);
     await query(
       `INSERT INTO account_recovery_requests
        (request_type, username, contact, player_uid, details, status, created_at)
