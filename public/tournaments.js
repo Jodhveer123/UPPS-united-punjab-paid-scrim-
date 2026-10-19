@@ -15,7 +15,9 @@ fetch("/api/tournaments")
   })
   .catch(() => {
     list.innerHTML = '<div class="empty"><h3>Events are temporarily unavailable</h3><p>Please try refreshing this page in a moment.</p><button class="btn small" type="button" id="retryLoad">Try again</button></div>';
-    resultCount.textContent = "";\n    const retry = document.getElementById("retryLoad");\n    if (retry) retry.addEventListener("click", () => location.reload());
+    resultCount.textContent = "";
+    const retry = document.getElementById("retryLoad");
+    if (retry) retry.addEventListener("click", () => location.reload());
   });
 
 [search, modeFilter, entryFilter, statusFilter].forEach(control => control.addEventListener("input", render));
