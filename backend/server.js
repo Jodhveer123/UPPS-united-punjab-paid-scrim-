@@ -716,11 +716,11 @@ app.post("/api/auth/recovery/request", async (req, res) => {
   if (!["USERNAME", "PASSWORD", "BOTH"].includes(type)) {
     return sendError(res, 400, "Choose a valid recovery request type.");
   }
-  if (!safeUsername && !safeContact && !safeUid) {
-    return sendError(res, 400, "Enter at least one account detail so support can investigate.");
+  if (!/^[^\\s@]+@gmail\\.com$/i.test(safeContact)) {
+    return sendError(res, 400, "Enter the Gmail address you used when registering.");
   }
-  if (safeUid && !/^[0-9]{5,20}$/.test(safeUid)) {
-    return sendError(res, 400, "Free Fire UID must contain 5–20 digits.");
+  if (!/^[0-9]{5,20}$/.test(safeUid)) {
+    return sendError(res, 400, "Enter your Free Fire UID (5–20 digits).");
   }
 
   try {
