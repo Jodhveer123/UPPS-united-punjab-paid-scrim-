@@ -294,7 +294,7 @@ function showRegistrationModal(registration, alreadyRegistered) {
         <h3>Payment instructions</h3>
         <p class="muted">For paid tournaments, follow the organizer's payment instructions. Free tournaments do not require payment. Contact the Help Centre if you need help.</p>
 
-        <img src="/assets/qr.jpg" alt="UPPS payment QR Code" class="whatsapp-qr">
+        <img src="qr.jpg" alt="UPPS payment QR Code" class="whatsapp-qr">
 
         <a href="#" id="whatsappJoinBtn" class="btn">
           Join our WhatsApp for updates
