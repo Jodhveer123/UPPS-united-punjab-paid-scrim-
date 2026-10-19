@@ -3,7 +3,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (v) => String(v ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
 const fmt = (v) => v ? new Date(v).toLocaleString() : "—";
 
-let state = { admin:null, players:[], tournaments:[], registrations:[], matches:[], reviews:[], staff:[], audit:[] };
+let state = { admin:null, players:[], tournaments:[], registrations:[], matches:[], reviews:[], staff:[], audit:[], recovery:[] };
 
 async function api(url, options={}) {
   const r = await fetch(url, { credentials:"include", ...options, headers:{"Content-Type":"application/json", ...(options.headers||{})} });
@@ -21,7 +21,7 @@ async function boot(){
 function showLogin(){ $("#loginView").classList.remove("hidden"); $("#adminApp").classList.add("hidden"); }
 function showApp(){ $("#loginView").classList.add("hidden"); $("#adminApp").classList.remove("hidden"); $("#adminIdentity").textContent=`${state.admin.username} · ${state.admin.role}`; }
 
-async function loadAll(){ await Promise.all([loadPlayers(),loadTournaments(),loadRegistrations(),loadMatches(),loadReviews(),loadStaff(),loadAudit()]); renderDashboard(); renderAll(); }
+async function loadAll(){ await Promise.all([loadPlayers(),loadTournaments(),loadRegistrations(),loadMatches(),loadReviews(),loadStaff(),loadAudit(),loadRecovery()]); renderDashboard(); renderAll(); }
 async function loadPlayers(){ const d=await api("/api/admin/players"); state.players=d.players||[]; }
 async function loadTournaments(){ const d=await api("/api/admin/tournaments"); state.tournaments=d.tournaments||[]; }
 async function loadRegistrations(){ const d=await api("/api/admin/registrations"); state.registrations=d.registrations||[]; }
@@ -29,6 +29,7 @@ async function loadMatches(){ const d=await api("/api/admin/matches"); state.mat
 async function loadReviews(){ try{const d=await api("/api/admin/reviews");state.reviews=d.reviews||[]}catch{state.reviews=[];} }
 async function loadStaff(){ try{const d=await api("/api/admin/staff");state.staff=d.staff||[]}catch{state.staff=[];} }
 async function loadAudit(){ const d=await api("/api/admin/audit"); state.audit=d.logs||[]; }
+async function loadRecovery(){ try{const d=await api("/api/admin/recovery-requests");state.recovery=d.requests||[]}catch{state.recovery=[];} }
 
 function renderDashboard(){
   $("#statPlayers").textContent=state.players.length;
@@ -43,7 +44,7 @@ function renderDashboard(){
 function renderPlayers(){
   const q=$("#playerSearch").value.trim().toLowerCase();
   const rows=state.players.filter(p=>[p.username,p.display_name,p.free_fire_uid,p.email].some(v=>String(v||"").toLowerCase().includes(q)));
-  $("#playersTable").innerHTML=rows.map(p=>`<tr><td><b>${esc(p.display_name||"—")}</b><small>${esc(p.public_id)}</small></td><td>${esc(p.username)}</td><td>${esc(p.free_fire_uid||"—")}</td><td>${esc(p.email||p.phone||"—")}</td><td>${pill(p.status)}</td><td>${fmt(p.created_at)}</td><td><select class="player-status" data-id="${p.id}"><option ${p.status==="ACTIVE"?"selected":""}>ACTIVE</option><option ${p.status==="SUSPENDED"?"selected":""}>SUSPENDED</option><option ${p.status==="BANNED"?"selected":""}>BANNED</option></select><button class="btn secondary reset-player-password" data-id="${p.id}" data-username="${esc(p.username)}" data-email="${esc(p.email||"")}" type="button">Reset password</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No players found.</td></tr>`;
+  $("#playersTable").innerHTML=rows.map(p=>`<tr><td><b>${esc(p.display_name||"—")}</b><small>${esc(p.public_id)}</small></td><td>${esc(p.username)}</td><td>${esc(p.free_fire_uid||"—")}</td><td>${esc(p.email||p.phone||"—")}</td><td>${pill(p.status)}</td><td>${fmt(p.created_at)}</td><td><select class="player-status" data-id="${p.id}"><option ${p.status==="ACTIVE"?"selected":""}>ACTIVE</option><option ${p.status==="SUSPENDED"?"selected":""}>SUSPENDED</option><option ${p.status==="BANNED"?"selected":""}>BANNED</option></select><button class="btn secondary change-player-username" data-id="${p.id}" data-username="${esc(p.username)}" type="button">Change username</button> <button class="btn secondary reset-player-password" data-id="${p.id}" data-username="${esc(p.username)}" data-email="${esc(p.email||"")}" type="button">Reset password</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No players found.</td></tr>`;
 }
 function renderTournaments(){
   $("#tournamentsList").innerHTML=state.tournaments.map(t=>`<div class="entity-card"><div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · capacity ${esc(t.capacity)}</small></div><div class="entity-actions"><select class="tournament-status" data-id="${t.id}">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option ${t.status===s?"selected":""}>${s}</option>`).join("")}</select>${pill(t.status)}</div></div>`).join("")||"<div class='empty'>No tournaments.</div>";
@@ -88,7 +89,8 @@ function renderReviews(){
 }
 function renderStaff(){ $("#staffList").innerHTML=state.staff.map(s=>`<div class="entity-card"><div><b>${esc(s.username)}</b><small>${fmt(s.created_at)}</small></div><div>${pill(s.role)} <select class="staff-role" data-id="${s.id}"><option ${s.role==="OWNER"?"selected":""}>OWNER</option><option ${s.role==="TOURNAMENT_MANAGER"?"selected":""}>TOURNAMENT_MANAGER</option><option ${s.role==="RESULTS_MANAGER"?"selected":""}>RESULTS_MANAGER</option><option ${s.role==="MODERATOR"?"selected":""}>MODERATOR</option><option ${s.role==="SUPPORT"?"selected":""}>SUPPORT</option></select></div></div>`).join("")||"<div class='empty'>No staff accounts.</div>"; }
 function renderAudit(){ $("#auditTable").innerHTML=state.audit.map(a=>`<tr><td>${fmt(a.created_at)}</td><td>${esc(a.actor_type)} #${esc(a.actor_id||"")}</td><td>${esc(a.action)}</td><td>${esc(a.entity_type||"")}</td><td>${esc(a.entity_id||"")}</td><td><code>${esc(JSON.stringify(a.details||{}))}</code></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No audit logs.</td></tr>`; }
-function renderAll(){renderPlayers();renderTournaments();renderRegistrations();renderMatches();renderReviews();renderStaff();renderAudit();renderDashboard();}
+function renderRecovery(){ $("#recoveryTable").innerHTML=state.recovery.map(r=>`<tr><td>${esc(r.request_type)}</td><td>${esc(r.username||"—")}</td><td>${esc(r.contact||"—")}</td><td>${esc(r.player_uid||"—")}</td><td>${esc(r.details||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td>${r.status==="OPEN"?`<button class="btn secondary close-recovery" data-id="${r.id}" type="button">Mark reviewed</button>`:"—"}</td></tr>`).join("")||`<tr><td colspan="8" class="empty">No recovery requests.</td></tr>`; }
+function renderAll(){renderPlayers();renderTournaments();renderRegistrations();renderMatches();renderReviews();renderStaff();renderAudit();renderRecovery();renderDashboard();}
 
 function switchSection(name){ $$(".admin-section").forEach(x=>x.classList.toggle("active",x.id===`section-${name}`)); $$("#adminNav button").forEach(x=>x.classList.toggle("active",x.dataset.section===name)); $("#sectionTitle").textContent=name.charAt(0).toUpperCase()+name.slice(1); }
 
@@ -99,6 +101,8 @@ $("#playerSearch").addEventListener("input",renderPlayers);
 $("#registrationFilter").addEventListener("change",renderRegistrations);
 $("#reviewFilter").addEventListener("change",renderReviews);
 $("#refreshAudit").addEventListener("click",async()=>{await loadAudit();renderAudit();});
+$("#refreshRecovery").addEventListener("click",async()=>{await loadRecovery();renderRecovery();});
+$("#recoveryTable").addEventListener("click",async e=>{const b=e.target.closest(".close-recovery");if(!b)return;try{await api("/api/admin/recovery-requests/"+b.dataset.id+"/close",{method:"POST"});await loadRecovery();renderRecovery();msg("Recovery request marked reviewed.");}catch(err){msg(err.message,true);}});
 
 $("#tournamentForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());try{await api("/api/admin/tournaments",{method:"POST",body:JSON.stringify({...b,capacity:Number(b.capacity),matchesCount:Number(b.matchesCount||1)})});e.target.reset();msg("Tournament created.");await loadTournaments();renderAll();}catch(err){msg(err.message,true);}});
 $("#matchForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());b.roomEnabled=f.has("roomEnabled");b.roomReleaseAt=dateTimeLocalToISO(b.roomReleaseAt);b.startAt=dateTimeLocalToISO(b.startAt);try{await api(`/api/admin/tournaments/${b.tournamentId}/matches`,{method:"POST",body:JSON.stringify({...b,matchNumber:Number(b.matchNumber)})});e.target.reset();msg("Match created.");await loadMatches();renderAll();}catch(err){msg(err.message,true);}});
@@ -109,6 +113,14 @@ $("#resultForm").addEventListener("submit",async e=>{e.preventDefault();const ro
 $("#staffForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());try{await api("/api/admin/staff",{method:"POST",body:JSON.stringify(b)});e.target.reset();msg("Staff account created.");await loadStaff();renderStaff();}catch(err){msg(err.message,true);}});
 
 $("#playersTable").addEventListener("click",async e=>{
+  const nameBtn=e.target.closest(".change-player-username");
+  if(nameBtn){
+    const username=prompt("New username for "+nameBtn.dataset.username+" (3–30 letters/numbers/._-):",nameBtn.dataset.username);
+    if(username===null)return;
+    try{const d=await api("/api/admin/players/"+nameBtn.dataset.id+"/username",{method:"PATCH",body:JSON.stringify({username})});msg(d.message||"Username changed.");await loadPlayers();renderPlayers();}
+    catch(err){msg(err.message,true);}
+    return;
+  }
   const b=e.target.closest(".reset-player-password"); if(!b)return;
   const password=prompt("Set a new password for "+b.dataset.username+" (minimum 8 characters). You must send it to the player separately using their registered Gmail: "+(b.dataset.email||"no email")+".");
   if(password===null)return;
