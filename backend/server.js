@@ -430,7 +430,7 @@ app.post(
       return sendError(res, 400, "Username, display name, Gmail address, Free Fire UID and password are required.");
     }
 
-    if (!/^[^\\s@]+@gmail\\.com$/i.test(String(email).trim())) {
+    if (!/^[^\s@]+@gmail\.com$/i.test(String(email).trim())) {
       return sendError(res, 400, "Please enter a valid Gmail address ending in @gmail.com.");
     }
 
@@ -716,7 +716,7 @@ app.post("/api/auth/recovery/request", async (req, res) => {
   if (!["USERNAME", "PASSWORD", "BOTH"].includes(type)) {
     return sendError(res, 400, "Choose a valid recovery request type.");
   }
-  if (!/^[^\\s@]+@gmail\\.com$/i.test(safeContact)) {
+  if (!/^[^\s@]+@gmail\.com$/i.test(safeContact)) {
     return sendError(res, 400, "Enter the Gmail address you used when registering.");
   }
   if (!/^[0-9]{5,20}$/.test(safeUid)) {
