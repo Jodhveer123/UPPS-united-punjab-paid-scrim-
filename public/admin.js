@@ -3,7 +3,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (v) => String(v ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
 const fmt = (v) => v ? new Date(v).toLocaleString() : "—";
 
-let state = { admin:null, players:[], tournaments:[], registrations:[], matches:[], reviews:[], staff:[], audit:[], recovery:[] };
+let state = { admin:null, players:[], tournaments:[], registrations:[], matches:[], reviews:[], staff:[], audit:[], recovery:[], cancelled:[] };
 
 async function api(url, options={}) {
   const r = await fetch(url, { credentials:"include", ...options, headers:{"Content-Type":"application/json", ...(options.headers||{})} });
@@ -21,9 +21,10 @@ async function boot(){
 function showLogin(){ $("#loginView").classList.remove("hidden"); $("#adminApp").classList.add("hidden"); }
 function showApp(){ $("#loginView").classList.add("hidden"); $("#adminApp").classList.remove("hidden"); $("#adminIdentity").textContent=`${state.admin.username} · ${state.admin.role}`; }
 
-async function loadAll(){ await Promise.all([loadPlayers(),loadTournaments(),loadRegistrations(),loadMatches(),loadReviews(),loadStaff(),loadAudit(),loadRecovery()]); renderDashboard(); renderAll(); }
+async function loadAll(){ await Promise.all([loadPlayers(),loadTournaments(),loadCancelled(),loadRegistrations(),loadMatches(),loadReviews(),loadStaff(),loadAudit(),loadRecovery()]); renderDashboard(); renderAll(); }
 async function loadPlayers(){ const d=await api("/api/admin/players"); state.players=d.players||[]; }
 async function loadTournaments(){ const d=await api("/api/admin/tournaments"); state.tournaments=d.tournaments||[]; }
+async function loadCancelled(){ const d=await api("/api/tournaments/cancelled"); state.cancelled=d.tournaments||[]; }
 async function loadRegistrations(){ const d=await api("/api/admin/registrations"); state.registrations=d.registrations||[]; }
 async function loadMatches(){ const d=await api("/api/admin/matches"); state.matches=d.matches||[]; }
 async function loadReviews(){ try{const d=await api("/api/admin/reviews");state.reviews=d.reviews||[]}catch{state.reviews=[];} }
@@ -49,6 +50,10 @@ function renderPlayers(){
 function renderTournaments(){
   $("#tournamentsList").innerHTML=state.tournaments.map(t=>`<div class="entity-card"><div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · ${esc(t.entry_type)} · ₹${Number(t.entry_fee||0).toFixed(2)} · capacity ${esc(t.capacity)}</small><small>${esc(t.description||"")}</small></div><div class="entity-actions tournament-actions"><select class="tournament-status" data-id="${t.id}" aria-label="Tournament status">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="btn secondary edit-tournament" data-id="${t.id}" type="button">Edit</button><button class="btn danger delete-tournament" data-id="${t.id}" type="button">Delete</button></div></div>`).join("")||"<div class='empty'>No tournaments.</div>";
   $("#matchTournament").innerHTML=state.tournaments.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+}
+function renderCancelled(){
+  const el=$("#cancelledTournamentsList"); if(!el)return;
+  el.innerHTML=state.cancelled.map(t=>`<div class="entity-card"><div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · ${esc(t.entry_type)} · ${esc(t.registrations_count)} registration(s)</small><small>${esc(t.description||"")}</small></div><div class="entity-actions"><button class="btn secondary restore-cancelled" data-id="${t.id}" type="button">Reopen tournament</button></div></div>`).join("")||"<div class='empty'>No cancelled tournaments.</div>";
 }
 function renderPayments(){
   const input=$("#paymentUidSearch");
@@ -108,7 +113,7 @@ function renderReviews(){
 function renderStaff(){ $("#staffList").innerHTML=state.staff.map(s=>`<div class="entity-card"><div><b>${esc(s.username)}</b><small>${fmt(s.created_at)}</small></div><div>${pill(s.role)} <select class="staff-role" data-id="${s.id}"><option ${s.role==="OWNER"?"selected":""}>OWNER</option><option ${s.role==="TOURNAMENT_MANAGER"?"selected":""}>TOURNAMENT_MANAGER</option><option ${s.role==="RESULTS_MANAGER"?"selected":""}>RESULTS_MANAGER</option><option ${s.role==="MODERATOR"?"selected":""}>MODERATOR</option><option ${s.role==="SUPPORT"?"selected":""}>SUPPORT</option></select></div></div>`).join("")||"<div class='empty'>No staff accounts.</div>"; }
 function renderAudit(){ $("#auditTable").innerHTML=state.audit.map(a=>`<tr><td>${fmt(a.created_at)}</td><td>${esc(a.actor_type)} #${esc(a.actor_id||"")}</td><td>${esc(a.action)}</td><td>${esc(a.entity_type||"")}</td><td>${esc(a.entity_id||"")}</td><td><code>${esc(JSON.stringify(a.details||{}))}</code></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No audit logs.</td></tr>`; }
 function renderRecovery(){ $("#recoveryTable").innerHTML=state.recovery.map(r=>`<tr><td>${esc(r.request_type)}</td><td>${esc(r.username||"—")}</td><td>${esc(r.contact||"—")}</td><td>${esc(r.player_uid||"—")}</td><td>${esc(r.details||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td>${r.status==="OPEN"?`<button class="btn secondary close-recovery" data-id="${r.id}" type="button">Mark reviewed</button>`:"—"}</td></tr>`).join("")||`<tr><td colspan="8" class="empty">No recovery requests.</td></tr>`; }
-function renderAll(){renderPlayers();renderTournaments();renderRegistrations();renderPayments();renderMatches();renderReviews();renderStaff();renderAudit();renderRecovery();renderDashboard();}
+function renderAll(){renderPlayers();renderTournaments();renderCancelled();renderRegistrations();renderPayments();renderMatches();renderReviews();renderStaff();renderAudit();renderRecovery();renderDashboard();}
 
 function switchSection(name){ $$(".admin-section").forEach(x=>x.classList.toggle("active",x.id===`section-${name}`)); $$("#adminNav button").forEach(x=>x.classList.toggle("active",x.dataset.section===name)); $("#sectionTitle").textContent=name.charAt(0).toUpperCase()+name.slice(1); }
 
@@ -120,6 +125,8 @@ $("#registrationFilter").addEventListener("change",renderRegistrations);
 $("#paymentUidSearch").addEventListener("input",renderPayments);
 $("#clearPaymentSearch").addEventListener("click",()=>{$("#paymentUidSearch").value="";renderPayments();$("#paymentUidSearch").focus();});
 $("#reviewFilter").addEventListener("change",renderReviews);
+$("#refreshCancelled").addEventListener("click",async()=>{await loadCancelled();renderCancelled();});
+$("#cancelledTournamentsList").addEventListener("click",async e=>{const b=e.target.closest(".restore-cancelled");if(!b)return;const t=state.cancelled.find(x=>String(x.id)===b.dataset.id);if(!t||!confirm(`Reopen "${t.title}" and make it visible again?`))return;try{await api(`/api/admin/tournaments/${t.id}/status`,{method:"PATCH",body:JSON.stringify({status:"REGISTRATION OPEN"})});await Promise.all([loadCancelled(),loadTournaments()]);renderAll();msg("Tournament reopened.");}catch(err){msg(err.message,true);}});
 $("#refreshAudit").addEventListener("click",async()=>{await loadAudit();renderAudit();});
 $("#refreshRecovery").addEventListener("click",async()=>{await loadRecovery();renderRecovery();});
 $("#recoveryTable").addEventListener("click",async e=>{const b=e.target.closest(".close-recovery");if(!b)return;try{await api("/api/admin/recovery-requests/"+b.dataset.id+"/close",{method:"POST"});await loadRecovery();renderRecovery();msg("Recovery request marked reviewed.");}catch(err){msg(err.message,true);}});
