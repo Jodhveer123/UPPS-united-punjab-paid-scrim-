@@ -34,7 +34,7 @@ async function load() {
       <section class="panel">
         <h2>My registrations</h2>
         ${
-          registrations.map(renderRegistration).join("") ||
+          registrations.map(x => renderRegistration(x, p.free_fire_uid)).join("") ||
           '<p class="muted">No registrations yet.</p>'
         }
       </section>
@@ -118,9 +118,12 @@ async function loadTournamentRooms(tournamentPublicId) {
   }
 }
 
-function renderRegistration(x) {
+function renderRegistration(x, profileUid) {
   const status = String(x.status || "PENDING");
   const info = statusInfo(status);
+  const paid = x.entry_type === "PAID";
+  const paymentStatus = String(x.payment_status || (paid ? "NOT_SUBMITTED" : "NOT_REQUIRED"));
+  const canSubmitPayment = paid && paymentStatus !== "VERIFIED" && !["REJECTED","CANCELLED"].includes(status);
 
   return `
     <div class="registration-card">
@@ -131,20 +134,68 @@ function renderRegistration(x) {
         </div>
         <span class="status-pill ${info.className}">${esc(info.label)}</span>
       </div>
-
+      ${paid ? `
+        <div class="registration-status ${paymentStatus==="VERIFIED"?"approved":paymentStatus==="REJECTED"?"rejected":"pending"}">
+          <strong>Payment: ${esc(paymentStatus.replaceAll("_"," "))}</strong>
+          <p>${paymentStatus==="VERIFIED"?"Payment verified by the organizer. Registration approval is still shown separately above.":paymentStatus==="SUBMITTED"?"Your UTR has been submitted and is waiting for organizer verification.":paymentStatus==="REJECTED"?"Payment reference rejected. Check the note and submit a corrected UTR.":"Submit your UTR after paying the entry fee. The organizer will verify it manually."}</p>
+          ${x.payment_note ? `<p><b>Organizer note:</b> ${esc(x.payment_note)}</p>` : ""}
+          ${x.utr ? `<p><b>Submitted UTR:</b> ${esc(x.utr)}</p>` : ""}
+          ${canSubmitPayment ? `
+            <form class="payment-reference-form" data-registration="${esc(x.public_id)}">
+              <label>Free Fire UID (must match your profile)
+                <input name="freeFireUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" value="${esc(profileUid||"")}" required>
+              </label>
+              <label>UTR / transaction reference
+                <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" value="${esc(x.utr||"")}" placeholder="Enter UTR from your payment app" required>
+              </label>
+              <button class="btn primary" type="submit">${paymentStatus==="REJECTED"?"Resubmit payment reference":"Submit payment reference"}</button>
+              <p class="muted payment-message" role="status" aria-live="polite"></p>
+            </form>
+          ` : ""}
+        </div>` : ""}
       <div class="registration-status ${info.className}">
         <strong>${esc(info.title)}</strong>
         <p>${esc(info.message)}</p>
-        ${
-          status === "VERIFIED"
-            ? `<div class="success-note">You are eligible to participate. Follow the tournament instructions when they are published.</div>
-               <div class="room-access" data-room-tournament="${esc(x.tournament_public_id)}"><p class="muted">Checking match room access…</p></div>`
-            : ""
-        }
+        ${status === "VERIFIED"
+          ? `<div class="success-note">You are eligible to participate. Follow the tournament instructions when they are published.</div>
+             <div class="room-access" data-room-tournament="${esc(x.tournament_public_id)}"><p class="muted">Checking match room access…</p></div>`
+          : ""}
       </div>
     </div>
   `;
 }
+
+document.addEventListener("submit", async event => {
+  const form = event.target.closest(".payment-reference-form");
+  if (!form) return;
+  event.preventDefault();
+  const button = form.querySelector('button[type="submit"]');
+  const message = form.querySelector(".payment-message");
+  const values = new FormData(form);
+  button.disabled = true;
+  button.textContent = "Submitting…";
+  message.textContent = "";
+  try {
+    const response = await fetch("/api/registrations/" + encodeURIComponent(form.dataset.registration) + "/payment", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "same-origin",
+      body: JSON.stringify({utr:String(values.get("utr")||"").trim(), freeFireUid:String(values.get("freeFireUid")||"").trim()})
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) { location.href = "/login.html"; return; }
+    if (!response.ok || !data.ok) throw new Error(data.error || "Could not submit payment reference.");
+    message.textContent = data.message || "Payment reference submitted for review.";
+    await load();
+  } catch (error) {
+    message.textContent = error.message || "Network error. Try again.";
+  } finally {
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = "Submit payment reference";
+    }
+  }
+});
 
 function statusInfo(status) {
   if (status === "VERIFIED") {
