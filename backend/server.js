@@ -156,6 +156,23 @@ async function query(text, params = []) {
   return pool.query(text, params);
 }
 
+let paymentColumnsReady;
+async function ensurePaymentColumns() {
+  if (!paymentColumnsReady) {
+    paymentColumnsReady = (async () => {
+      await query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'NOT_SUBMITTED'`);
+      await query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_submitted_at TIMESTAMPTZ`);
+      await query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ`);
+      await query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_note TEXT NOT NULL DEFAULT ''`);
+      await query(`UPDATE registrations r SET payment_status='NOT_REQUIRED' FROM tournaments t WHERE t.id=r.tournament_id AND t.entry_type='FREE' AND r.payment_status='NOT_SUBMITTED'`);
+    })().catch(error => {
+      paymentColumnsReady = null;
+      throw error;
+    });
+  }
+  return paymentColumnsReady;
+}
+
 async function audit(
   actorType,
   actorId,
@@ -1111,6 +1128,12 @@ app.get(
   "/api/player/registrations",
   auth("PLAYER"),
   async (req, res) => {
+    try {
+      await ensurePaymentColumns();
+    } catch (e) {
+      console.error("Payment migration error:", e);
+      return sendError(res, 500, "Dashboard database update is not ready. Please retry shortly.");
+    }
     const r = await query(
       `
       SELECT
@@ -1155,6 +1178,10 @@ app.post(
   "/api/registrations/:publicId/payment",
   auth("PLAYER"),
   async (req, res) => {
+    try { await ensurePaymentColumns(); } catch (e) {
+      console.error("Payment migration error:", e);
+      return sendError(res, 500, "Payment database update is not ready. Please retry shortly.");
+    }
     const utr = String(req.body?.utr || "").trim();
     const freeFireUid = String(req.body?.freeFireUid || "").trim();
     if (!/^[A-Za-z0-9-]{6,40}$/.test(utr)) {
