@@ -1814,3 +1814,14 @@ body:not(.admin-body) #app .status-pill { white-space:nowrap; }
   .admin-body .result-notes-field { grid-column:1/-1; }
   .admin-body .result-row .remove-result { grid-column:2; justify-self:end; }
 }
+
+
+/* Manual payment verification UI */
+.payment-reference-form { display:grid; gap:12px; margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,.08); }
+.payment-reference-form label { display:grid; gap:7px; color:#d6c8e8; font-size:13px; font-weight:700; }
+.payment-reference-form input { width:100%; min-width:0; box-sizing:border-box; }
+.payment-reference-form .payment-message { margin:0; overflow-wrap:anywhere; }
+.admin-body #registrationsTable td { vertical-align:top; }
+.admin-body #registrationsTable .button-row { display:grid; grid-template-columns:1fr; gap:7px; min-width:125px; margin-top:8px; }
+.admin-body #registrationsTable .button-row .btn { padding:8px 10px; font-size:12px; white-space:normal; }
+.admin-body #registrationsTable select { min-width:125px; }
