@@ -1,86 +1,81 @@
 async function load() {
-  const r = await fetch("/api/auth/me");
-  if (r.status === 401) {
-    location.href = "/login.html";
-    return;
-  }
+  const app = document.getElementById("app");
+  if (!app) return;
+  app.innerHTML = '<div class="empty">Loading your player dashboard…</div>';
 
-  const d = await r.json();
-  const p = d.player;
+  try {
+    const meResponse = await fetch("/api/auth/me", {credentials:"same-origin", cache:"no-store"});
+    if (meResponse.status === 401) { location.href = "/login.html"; return; }
+    const me = await meResponse.json().catch(() => ({}));
+    if (!meResponse.ok || !me.ok || !me.player) {
+      throw new Error(me.error || "Could not load your player profile. Please sign in again.");
+    }
+    const p = me.player;
 
-  const a = await fetch("/api/player/registrations").then(x => x.json());
-  const rr = await fetch("/api/player/results").then(x => x.json());
+    const [registrationsResponse, resultsResponse] = await Promise.all([
+      fetch("/api/player/registrations", {credentials:"same-origin", cache:"no-store"}),
+      fetch("/api/player/results", {credentials:"same-origin", cache:"no-store"})
+    ]);
+    if (registrationsResponse.status === 401 || resultsResponse.status === 401) {
+      location.href = "/login.html"; return;
+    }
+    const [registrationsData, resultsData] = await Promise.all([
+      registrationsResponse.json().catch(() => ({})),
+      resultsResponse.json().catch(() => ({}))
+    ]);
+    if (!registrationsResponse.ok || !registrationsData.ok) {
+      throw new Error(registrationsData.error || "Could not load your registrations. Please refresh in a moment.");
+    }
+    if (!resultsResponse.ok || !resultsData.ok) {
+      throw new Error(resultsData.error || "Could not load match results. Please refresh in a moment.");
+    }
 
-  const registrations = a.registrations || [];
+    const registrations = Array.isArray(registrationsData.registrations) ? registrationsData.registrations : [];
+    const results = Array.isArray(resultsData.results) ? resultsData.results : [];
 
-  document.getElementById("app").innerHTML = `
-    <div class="page-title">
-      <div>
-        <span class="eyebrow">PLAYER DASHBOARD</span>
-        <h1>Welcome, ${esc(p.display_name)}</h1>
-        <p class="muted">${esc(p.public_id)}</p>
-      </div>
-    </div>
-
-    <div class="grid2">
-      <section class="panel">
-        <h2>Profile</h2>
-        <div class="row"><b>Username</b><span>${esc(p.username)}</span></div>
-        <div class="row"><b>Free Fire UID</b><span>${esc(p.free_fire_uid || "Not set")}</span></div>
-        <div class="row"><b>Email</b><span>${esc(p.email || "Not set")}</span></div>
-        <div class="row"><b>Status</b><span>${esc(p.status)}</span></div>
-      </section>
-
-      <section class="panel">
-        <h2>My registrations</h2>
-        ${
-          registrations.map(x => renderRegistration(x, p.free_fire_uid)).join("") ||
-          '<p class="muted">No registrations yet.</p>'
-        }
-      </section>
-    </div>
-
-    <section class="panel">
-      <h2>Eligibility</h2>
-      <p class="muted">
-        A registration is not automatically a confirmed slot.
-        The UPPS organizer must review and approve it before you are eligible to participate.
-      </p>
-      <div class="eligibility-grid">
-        <div class="eligibility-card pending-card">
-          <b>⏳ Pending</b>
-          <span>Waiting for organizer approval.</span>
-        </div>
-        <div class="eligibility-card approved-card">
-          <b>✅ Approved</b>
-          <span>You are eligible for the tournament.</span>
-        </div>
-        <div class="eligibility-card rejected-card">
-          <b>❌ Rejected</b>
-          <span>You are not eligible for that tournament.</span>
+    app.innerHTML = `
+      <div class="page-title">
+        <div>
+          <span class="eyebrow">PLAYER DASHBOARD</span>
+          <h1>Welcome, ${esc(p.display_name)}</h1>
+          <p class="muted">${esc(p.public_id)}</p>
         </div>
       </div>
-    </section>
+      <div class="grid2">
+        <section class="panel">
+          <h2>Profile</h2>
+          <div class="row"><b>Username</b><span>${esc(p.username)}</span></div>
+          <div class="row"><b>Free Fire UID</b><span>${esc(p.free_fire_uid || "Not set")}</span></div>
+          <div class="row"><b>Email</b><span>${esc(p.email || "Not set")}</span></div>
+          <div class="row"><b>Status</b><span>${esc(p.status || "ACTIVE")}</span></div>
+        </section>
+        <section class="panel">
+          <h2>My registrations</h2>
+          ${registrations.map(x => renderRegistration(x, p.free_fire_uid)).join("") || '<p class="muted">No registrations yet. Join a tournament to see it here.</p>'}
+        </section>
+      </div>
+      <section class="panel">
+        <h2>Eligibility</h2>
+        <p class="muted">A registration is not automatically a confirmed slot. The UPPS organizer must review and approve it before you are eligible to participate.</p>
+        <div class="eligibility-grid">
+          <div class="eligibility-card pending-card"><b>⏳ Pending</b><span>Waiting for organizer approval.</span></div>
+          <div class="eligibility-card approved-card"><b>✅ Approved</b><span>You are eligible for the tournament.</span></div>
+          <div class="eligibility-card rejected-card"><b>❌ Rejected</b><span>You are not eligible for that tournament.</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Results</h2>
+        ${results.map(x => `<div class="row"><b>${esc(x.title)} — Match ${esc(x.match_number)}</b><span>#${esc(x.placement)} • ${esc(x.kills)} kills • ${esc(x.points)} pts</span></div>`).join("") || '<p class="muted">No results yet.</p>'}
+      </section>
+      <a class="btn" href="/tournaments.html">Find a tournament</a>
+    `;
 
-    <section class="panel">
-      <h2>Results</h2>
-      ${
-        (rr.results || []).map(x => `
-          <div class="row">
-            <b>${esc(x.title)} — Match ${esc(x.match_number)}</b>
-            <span>#${esc(x.placement)} • ${esc(x.kills)} kills • ${esc(x.points)} pts</span>
-          </div>
-        `).join("") ||
-        '<p class="muted">No results yet.</p>'
-      }
-    </section>
-
-    <a class="btn" href="/tournaments.html">Find a tournament</a>
-  `;
-
-  // Load room access separately; the server checks approval and release time.
-  for (const registration of registrations.filter(x => x.status === "VERIFIED")) {
-    loadTournamentRooms(registration.tournament_public_id);
+    for (const registration of registrations.filter(x => x.status === "VERIFIED")) {
+      loadTournamentRooms(registration.tournament_public_id);
+    }
+  } catch (error) {
+    app.innerHTML = `<section class="panel"><h2>We couldn't load your dashboard</h2><p class="muted">${esc(error.message || "Unexpected error. Please try again.")}</p><button class="btn" id="retryDashboard" type="button">Try again</button></section>`;
+    document.getElementById("retryDashboard")?.addEventListener("click", load);
   }
 }
 
