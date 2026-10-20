@@ -1118,6 +1118,10 @@ app.get(
         r.status,
         r.payment_id,
         r.utr,
+        r.payment_status,
+        r.payment_submitted_at,
+        r.payment_verified_at,
+        r.payment_note,
         r.team_name,
         r.created_at,
         t.public_id AS tournament_public_id,
@@ -1150,12 +1154,47 @@ app.get(
 app.post(
   "/api/registrations/:publicId/payment",
   auth("PLAYER"),
-  async (_req, res) => {
-    return sendError(
-      res,
-      410,
-      "Payment submission is not available in this version. Registration requires organizer approval."
-    );
+  async (req, res) => {
+    const utr = String(req.body?.utr || "").trim();
+    const freeFireUid = String(req.body?.freeFireUid || "").trim();
+    if (!/^[A-Za-z0-9-]{6,40}$/.test(utr)) {
+      return sendError(res, 400, "Enter a valid UTR / transaction reference (6–40 letters or numbers).");
+    }
+    if (!/^[0-9]{5,20}$/.test(freeFireUid)) {
+      return sendError(res, 400, "Enter your 5–20 digit Free Fire UID.");
+    }
+    try {
+      const r = await query(
+        `SELECT r.id, r.status, r.payment_status, t.id AS tournament_id,
+                t.title, t.entry_type, p.free_fire_uid
+         FROM registrations r
+         JOIN tournaments t ON t.id=r.tournament_id
+         JOIN players p ON p.id=r.player_id
+         WHERE r.public_id=$1 AND r.player_id=$2
+         LIMIT 1`,
+        [req.params.publicId, req.auth.id]
+      );
+      if (!r.rowCount) return sendError(res, 404, "Registration not found for your account.");
+      const reg = r.rows[0];
+      if (reg.entry_type !== "PAID") return sendError(res, 400, "This is a free tournament; payment is not required.");
+      if (!reg.free_fire_uid || reg.free_fire_uid !== freeFireUid) return sendError(res, 400, "The Free Fire UID does not match your UPPS profile.");
+      if (["REJECTED","CANCELLED"].includes(reg.status)) return sendError(res, 400, "This registration is not active.");
+      if (reg.payment_status === "VERIFIED") return sendError(res, 409, "Payment is already verified. Contact the organizer if you think this is incorrect.");
+      const saved = await query(
+        `UPDATE registrations
+         SET utr=$1, payment_status='SUBMITTED', payment_submitted_at=NOW(),
+             payment_verified_at=NULL, payment_note=''
+         WHERE id=$2
+         RETURNING public_id, payment_status, payment_submitted_at`,
+        [utr, reg.id]
+      );
+      await audit("PLAYER", req.auth.id, "PAYMENT_REFERENCE_SUBMITTED", "REGISTRATION", reg.id, { tournamentId: reg.tournament_id });
+      return res.json({ok:true, payment:saved.rows[0], message:"Payment reference submitted. Your payment is awaiting organizer verification."});
+    } catch (e) {
+      if (e.code === "23505") return sendError(res, 409, "This transaction reference has already been submitted.");
+      console.error(e);
+      return sendError(res, 500, "Could not submit payment reference.");
+    }
   }
 );
 
@@ -1751,6 +1790,31 @@ app.get(
 );
 
 app.patch(
+  "/api/admin/registrations/:id/payment",
+  auth("ADMIN"),
+  async (req, res) => {
+    const paymentStatus = String(req.body?.paymentStatus || "");
+    const note = String(req.body?.note || "").trim().slice(0,500);
+    if (!["VERIFIED","REJECTED"].includes(paymentStatus)) {
+      return sendError(res, 400, "Payment status must be VERIFIED or REJECTED.");
+    }
+    const r = await query(
+      `UPDATE registrations r
+       SET payment_status=$1,
+           payment_verified_at=CASE WHEN $1='VERIFIED' THEN NOW() ELSE NULL END,
+           payment_note=$2
+       FROM tournaments t
+       WHERE r.id=$3 AND t.id=r.tournament_id AND t.entry_type='PAID'
+       RETURNING r.*`,
+      [paymentStatus, note, req.params.id]
+    );
+    if (!r.rowCount) return sendError(res, 404, "Paid registration not found.");
+    await audit("ADMIN", req.auth.id, "PAYMENT_REVIEW", "REGISTRATION", r.rows[0].id, {paymentStatus, note});
+    return res.json({ok:true, registration:r.rows[0]});
+  }
+);
+
+app.patch(
   "/api/admin/registrations/:id/status",
   auth("ADMIN"),
   async (req, res) => {
@@ -1770,6 +1834,17 @@ app.patch(
         400,
         "Invalid registration status."
       );
+    }
+
+    const current = await query(
+      `SELECT r.id, r.payment_status, t.entry_type
+       FROM registrations r JOIN tournaments t ON t.id=r.tournament_id
+       WHERE r.id=$1`,
+      [req.params.id]
+    );
+    if (!current.rowCount) return sendError(res, 404, "Registration not found.");
+    if (status === "VERIFIED" && current.rows[0].entry_type === "PAID" && current.rows[0].payment_status !== "VERIFIED") {
+      return sendError(res, 400, "Verify this paid tournament's payment before approving the registration.");
     }
 
     const r = await query(
