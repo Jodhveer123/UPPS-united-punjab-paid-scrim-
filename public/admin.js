@@ -47,8 +47,16 @@ function renderPlayers(){
   $("#playersTable").innerHTML=rows.map(p=>`<tr><td><b>${esc(p.display_name||"—")}</b><small>${esc(p.public_id)}</small></td><td>${esc(p.username)}</td><td>${esc(p.free_fire_uid||"—")}</td><td>${esc(p.email||p.phone||"—")}</td><td>${pill(p.status)}</td><td>${fmt(p.created_at)}</td><td><select class="player-status" data-id="${p.id}"><option ${p.status==="ACTIVE"?"selected":""}>ACTIVE</option><option ${p.status==="SUSPENDED"?"selected":""}>SUSPENDED</option><option ${p.status==="BANNED"?"selected":""}>BANNED</option></select><button class="btn secondary change-player-username" data-id="${p.id}" data-username="${esc(p.username)}" type="button">Change username</button> <button class="btn secondary reset-player-password" data-id="${p.id}" data-username="${esc(p.username)}" data-email="${esc(p.email||"")}" type="button">Reset password</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No players found.</td></tr>`;
 }
 function renderTournaments(){
-  $("#tournamentsList").innerHTML=state.tournaments.map(t=>`<div class="entity-card"><div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · capacity ${esc(t.capacity)}</small></div><div class="entity-actions"><select class="tournament-status" data-id="${t.id}">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option ${t.status===s?"selected":""}>${s}</option>`).join("")}</select>${pill(t.status)}</div></div>`).join("")||"<div class='empty'>No tournaments.</div>";
+  $("#tournamentsList").innerHTML=state.tournaments.map(t=>`<div class="entity-card"><div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · ${esc(t.entry_type)} · ₹${Number(t.entry_fee||0).toFixed(2)} · capacity ${esc(t.capacity)}</small><small>${esc(t.description||"")}</small></div><div class="entity-actions tournament-actions"><select class="tournament-status" data-id="${t.id}" aria-label="Tournament status">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="btn secondary edit-tournament" data-id="${t.id}" type="button">Edit</button><button class="btn danger delete-tournament" data-id="${t.id}" type="button">Delete</button></div></div>`).join("")||"<div class='empty'>No tournaments.</div>";
   $("#matchTournament").innerHTML=state.tournaments.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+}
+function renderPayments(){
+  const input=$("#paymentUidSearch");
+  if(!input)return;
+  const q=input.value.trim().toLowerCase();
+  const rows=state.registrations.filter(r=>r.entry_type==="PAID" && q && [r.free_fire_uid,r.username,r.display_name,r.public_id,r.title,r.utr].some(v=>String(v||"").toLowerCase().includes(q)));
+  $("#paymentSearchHint").textContent=!q?"Enter at least part of a UID or username to find registrations.":`${rows.length} paid registration(s) found.`;
+  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>${esc(r.public_id)}</small></td><td>₹${Number(r.entry_fee||0).toFixed(2)}</td><td>${esc(r.utr||"Not submitted")}</td><td><b>${esc(r.payment_status||"NOT_SUBMITTED")}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td>${r.payment_status==="SUBMITTED"?`<div class="payment-action-stack"><button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button></div>`:r.payment_status==="VERIFIED"?"Verified":r.payment_status==="REJECTED"?"Rejected — player may resubmit":"Awaiting player UTR"}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No paid registration matched that search.":"Search by player UID to see payment records."}</td></tr>`;
 }
 function renderRegistrations(){
   const filter=$("#registrationFilter").value; const rows=state.registrations.filter(r=>filter==="ALL"||r.status===filter);
@@ -100,7 +108,7 @@ function renderReviews(){
 function renderStaff(){ $("#staffList").innerHTML=state.staff.map(s=>`<div class="entity-card"><div><b>${esc(s.username)}</b><small>${fmt(s.created_at)}</small></div><div>${pill(s.role)} <select class="staff-role" data-id="${s.id}"><option ${s.role==="OWNER"?"selected":""}>OWNER</option><option ${s.role==="TOURNAMENT_MANAGER"?"selected":""}>TOURNAMENT_MANAGER</option><option ${s.role==="RESULTS_MANAGER"?"selected":""}>RESULTS_MANAGER</option><option ${s.role==="MODERATOR"?"selected":""}>MODERATOR</option><option ${s.role==="SUPPORT"?"selected":""}>SUPPORT</option></select></div></div>`).join("")||"<div class='empty'>No staff accounts.</div>"; }
 function renderAudit(){ $("#auditTable").innerHTML=state.audit.map(a=>`<tr><td>${fmt(a.created_at)}</td><td>${esc(a.actor_type)} #${esc(a.actor_id||"")}</td><td>${esc(a.action)}</td><td>${esc(a.entity_type||"")}</td><td>${esc(a.entity_id||"")}</td><td><code>${esc(JSON.stringify(a.details||{}))}</code></td></tr>`).join("")||`<tr><td colspan="6" class="empty">No audit logs.</td></tr>`; }
 function renderRecovery(){ $("#recoveryTable").innerHTML=state.recovery.map(r=>`<tr><td>${esc(r.request_type)}</td><td>${esc(r.username||"—")}</td><td>${esc(r.contact||"—")}</td><td>${esc(r.player_uid||"—")}</td><td>${esc(r.details||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td>${r.status==="OPEN"?`<button class="btn secondary close-recovery" data-id="${r.id}" type="button">Mark reviewed</button>`:"—"}</td></tr>`).join("")||`<tr><td colspan="8" class="empty">No recovery requests.</td></tr>`; }
-function renderAll(){renderPlayers();renderTournaments();renderRegistrations();renderMatches();renderReviews();renderStaff();renderAudit();renderRecovery();renderDashboard();}
+function renderAll(){renderPlayers();renderTournaments();renderRegistrations();renderPayments();renderMatches();renderReviews();renderStaff();renderAudit();renderRecovery();renderDashboard();}
 
 function switchSection(name){ $$(".admin-section").forEach(x=>x.classList.toggle("active",x.id===`section-${name}`)); $$("#adminNav button").forEach(x=>x.classList.toggle("active",x.dataset.section===name)); $("#sectionTitle").textContent=name.charAt(0).toUpperCase()+name.slice(1); }
 
@@ -109,6 +117,8 @@ $("#adminNav").addEventListener("click",e=>{const b=e.target.closest("button[dat
 $("#adminLogoutBtn").addEventListener("click",async()=>{await api("/api/admin/logout",{method:"POST"}).catch(()=>{});showLogin();});
 $("#playerSearch").addEventListener("input",renderPlayers);
 $("#registrationFilter").addEventListener("change",renderRegistrations);
+$("#paymentUidSearch").addEventListener("input",renderPayments);
+$("#clearPaymentSearch").addEventListener("click",()=>{$("#paymentUidSearch").value="";renderPayments();$("#paymentUidSearch").focus();});
 $("#reviewFilter").addEventListener("change",renderReviews);
 $("#refreshAudit").addEventListener("click",async()=>{await loadAudit();renderAudit();});
 $("#refreshRecovery").addEventListener("click",async()=>{await loadRecovery();renderRecovery();});
@@ -141,6 +151,49 @@ $("#playersTable").addEventListener("click",async e=>{
 });
 $("#playersTable").addEventListener("change",async e=>{if(!e.target.classList.contains("player-status"))return;try{await api(`/api/admin/players/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadPlayers();renderPlayers();msg("Player status updated.");}catch(err){msg(err.message,true);}});
 $("#tournamentsList").addEventListener("change",async e=>{if(!e.target.classList.contains("tournament-status"))return;try{await api(`/api/admin/tournaments/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadTournaments();renderTournaments();msg("Tournament status updated.");}catch(err){msg(err.message,true);}});
+$("#tournamentsList").addEventListener("click",async e=>{
+  const edit=e.target.closest(".edit-tournament");
+  const del=e.target.closest(".delete-tournament");
+  if(edit){
+    const t=state.tournaments.find(x=>String(x.id)===edit.dataset.id); if(!t)return;
+    const title=prompt("Tournament title:",t.title); if(title===null)return;
+    const description=prompt("Description:",t.description||""); if(description===null)return;
+    const entryType=prompt("Entry type: FREE or PAID",t.entry_type); if(entryType===null)return;
+    const entryFee=prompt("Entry fee (₹):",String(t.entry_fee||0)); if(entryFee===null)return;
+    const capacity=prompt("Player capacity:",String(t.capacity)); if(capacity===null)return;
+    const matchesCount=prompt("Number of matches:",String(t.matches_count||1)); if(matchesCount===null)return;
+    const mode=prompt("Mode: SOLO, DUO or SQUAD",t.mode); if(mode===null)return;
+    const status=prompt("Status (e.g. REGISTRATION OPEN, PUBLISHED, LIVE, COMPLETED, CANCELLED):",t.status); if(status===null)return;
+    const rules=prompt("Rules:",t.rules||""); if(rules===null)return;
+    const prizeSummary=prompt("Prize information:",t.prize_summary||""); if(prizeSummary===null)return;
+    try{
+      await api(`/api/admin/tournaments/${t.id}`,{method:"PATCH",body:JSON.stringify({title,description,entryType:entryType.trim().toUpperCase(),entryFee:Number(entryFee),capacity:Number(capacity),matchesCount:Number(matchesCount),mode:mode.trim().toUpperCase(),status:status.trim().toUpperCase(),scoringType:t.scoring_type||"CUSTOM",startAt:t.start_at||null,registrationCloseAt:t.registration_close_at||null,rules,prizeSummary})});
+      await loadTournaments();renderAll();msg("Tournament updated.");
+    }catch(err){msg(err.message,true);}
+  }
+  if(del){
+    const t=state.tournaments.find(x=>String(x.id)===del.dataset.id);if(!t)return;
+    if(!confirm(`Delete "${t.title}"? This is allowed only if it has no registrations or matches.`))return;
+    try{await api(`/api/admin/tournaments/${t.id}`,{method:"DELETE"});await loadTournaments();renderAll();msg("Tournament deleted.");}
+    catch(err){msg(err.message,true);}
+  }
+});
+$("#tournamentsList").addEventListener("change",async e=>{
+  const select=e.target.closest(".tournament-status");if(!select)return;
+  const t=state.tournaments.find(x=>String(x.id)===select.dataset.id);if(!t)return;
+  try{await api(`/api/admin/tournaments/${t.id}/status`,{method:"PATCH",body:JSON.stringify({status:select.value})});await loadTournaments();renderAll();msg("Tournament status updated.");}
+  catch(err){select.value=t.status;msg(err.message,true);}
+});
+$("#paymentsTable").addEventListener("click",async e=>{
+  const button=e.target.closest(".payment-review");if(!button)return;
+  const status=button.dataset.status;
+  const note=prompt(status==="VERIFIED"?"Optional verification note:":"Reason for rejecting this payment (required):","")||"";
+  if(status==="REJECTED"&&!note.trim()){msg("Enter a reason when rejecting a payment.",true);return;}
+  if(!confirm(status==="VERIFIED"?"Confirm you checked the received payment and UTR in your payment account?":"Reject this payment reference?"))return;
+  button.disabled=true;
+  try{await api(`/api/admin/registrations/${button.dataset.id}/payment`,{method:"PATCH",body:JSON.stringify({paymentStatus:status,note})});await loadRegistrations();renderRegistrations();renderPayments();renderDashboard();msg(status==="VERIFIED"?"Payment verified. Approve the registration separately.":"Payment rejected. The player can submit a corrected UTR.");}
+  catch(err){msg(err.message,true);}finally{button.disabled=false;}
+});
 $("#registrationsTable").addEventListener("click",async e=>{
   const button=e.target.closest(".payment-review");
   if(!button)return;
