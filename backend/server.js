@@ -1715,6 +1715,54 @@ app.post(
 );
 
 app.patch(
+  "/api/admin/tournaments/:id",
+  auth("ADMIN"),
+  async (req, res) => {
+    const b = req.body || {};
+    if (!String(b.title || "").trim()) return sendError(res,400,"Tournament title is required.");
+    if (!["SOLO","DUO","SQUAD"].includes(b.mode)) return sendError(res,400,"Invalid tournament mode.");
+    if (!["FREE","PAID"].includes(b.entryType)) return sendError(res,400,"Invalid entry type.");
+    const capacity = Number(b.capacity);
+    const fee = Number(b.entryFee || 0);
+    const matchesCount = Number(b.matchesCount || 1);
+    if (!Number.isInteger(capacity) || capacity < 1) return sendError(res,400,"Capacity must be at least 1.");
+    if (!Number.isInteger(matchesCount) || matchesCount < 1) return sendError(res,400,"Matches must be at least 1.");
+    if (!Number.isFinite(fee) || fee < 0 || (b.entryType === "FREE" && fee !== 0)) return sendError(res,400,"Invalid entry fee.");
+    const r = await query(
+      `UPDATE tournaments SET title=$1,description=$2,mode=$3,entry_type=$4,entry_fee=$5,
+       capacity=$6,matches_count=$7,scoring_type=$8,status=$9,start_at=$10,
+       registration_close_at=$11,rules=$12,prize_summary=$13,updated_at=NOW()
+       WHERE id=$14 RETURNING *`,
+      [String(b.title).trim(),b.description||"",b.mode,b.entryType,fee,capacity,matchesCount,
+       b.scoringType||"CUSTOM",b.status||"DRAFT",b.startAt||null,b.registrationCloseAt||null,
+       b.rules||"",b.prizeSummary||"",req.params.id]
+    );
+    if (!r.rowCount) return sendError(res,404,"Tournament not found.");
+    await audit("ADMIN",req.auth.id,"UPDATE","TOURNAMENT",r.rows[0].id,{title:r.rows[0].title});
+    return res.json({ok:true,tournament:r.rows[0]});
+  }
+);
+
+app.delete(
+  "/api/admin/tournaments/:id",
+  auth("ADMIN"),
+  async (req, res) => {
+    const check = await query("SELECT id,title FROM tournaments WHERE id=$1",[req.params.id]);
+    if (!check.rowCount) return sendError(res,404,"Tournament not found.");
+    const activity = await query(
+      "SELECT (SELECT COUNT(*) FROM registrations WHERE tournament_id=$1) AS registrations, (SELECT COUNT(*) FROM matches WHERE tournament_id=$1) AS matches",
+      [req.params.id]
+    );
+    if (Number(activity.rows[0].registrations)>0 || Number(activity.rows[0].matches)>0) {
+      return sendError(res,409,"This tournament has registrations or matches. Change its status to CANCELLED instead of deleting records and payment history.");
+    }
+    await query("DELETE FROM tournaments WHERE id=$1",[req.params.id]);
+    await audit("ADMIN",req.auth.id,"DELETE","TOURNAMENT",req.params.id,{title:check.rows[0].title});
+    return res.json({ok:true,message:"Tournament deleted."});
+  }
+);
+
+app.patch(
   "/api/admin/tournaments/:id/status",
   auth("ADMIN"),
   async (req, res) => {
