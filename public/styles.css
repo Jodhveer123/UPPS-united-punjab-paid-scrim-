@@ -1825,3 +1825,27 @@ body:not(.admin-body) #app .status-pill { white-space:nowrap; }
 .admin-body #registrationsTable .button-row { display:grid; grid-template-columns:1fr; gap:7px; min-width:125px; margin-top:8px; }
 .admin-body #registrationsTable .button-row .btn { padding:8px 10px; font-size:12px; white-space:normal; }
 .admin-body #registrationsTable select { min-width:125px; }
+
+
+/* QR-modal payment form and dedicated admin payment review */
+.qr-payment-form { display:grid; gap:12px; margin-top:18px; padding:18px; border:1px solid rgba(173,117,255,.28); border-radius:16px; background:rgba(12,9,22,.8); text-align:left; }
+.qr-payment-form h3,.qr-payment-form p { margin:0; }
+.qr-payment-form label { display:grid; gap:7px; font-size:13px; font-weight:700; color:#e2d8f3; }
+.qr-payment-form input { width:100%; min-width:0; box-sizing:border-box; }
+.qr-payment-form .qr-payment-message { min-height:1em; overflow-wrap:anywhere; }
+.admin-body .payment-search-card { margin-bottom:18px; }
+.admin-body .payment-search-card label { display:block; margin-bottom:8px; font-weight:700; }
+.admin-body .payment-search-row { display:flex; gap:10px; align-items:center; }
+.admin-body .payment-search-row input { flex:1; min-width:0; }
+.admin-body .payment-action-stack { display:grid; gap:7px; min-width:100px; }
+.admin-body .payment-action-stack .btn { white-space:normal; }
+.admin-body #paymentsTable td { vertical-align:top; }
+.admin-body .tournament-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.admin-body .tournament-actions select { max-width:220px; min-width:160px; }
+.admin-body .tournament-actions .btn { padding:8px 12px; }
+@media(max-width:620px) {
+  .admin-body .payment-search-row { align-items:stretch; flex-direction:column; }
+  .admin-body .payment-search-row .btn { width:100%; }
+  .admin-body .tournament-actions { align-items:stretch; flex-direction:column; }
+  .admin-body .tournament-actions select,.admin-body .tournament-actions .btn { width:100%; max-width:none; }
+}
