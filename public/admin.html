@@ -28,6 +28,7 @@
         <button data-section="players">Players</button>
         <button data-section="recovery">Account Recovery</button>
         <button data-section="tournaments">Tournaments</button>
+        <button data-section="cancelled">Cancelled Tournaments</button>
         <button data-section="registrations">Registrations</button>
         <button data-section="payments">Payment Verification</button>
         <button data-section="matches">Matches</button>
@@ -110,6 +111,10 @@
         </div>
       </section>
 
+      <section id="section-cancelled" class="admin-section">
+        <div class="section-head"><div><h2>Cancelled tournaments</h2><p>Cancelled events are hidden from the public tournament list but remain here for history and testing cleanup.</p></div><button id="refreshCancelled" class="btn secondary" type="button">Refresh</button></div>
+        <div id="cancelledTournamentsList" class="entity-list"><div class="empty">Loading cancelled tournaments…</div></div>
+      </section>
       <section id="section-registrations" class="admin-section">
         <div class="section-head"><div><h2>Registrations</h2><p>Approve, reject, waitlist or cancel player registrations.</p></div><select id="registrationFilter"><option value="ALL">All</option><option value="PENDING">Pending</option><option value="VERIFIED">Approved</option><option value="REJECTED">Rejected</option><option value="WAITLISTED">Waitlisted</option><option value="CANCELLED">Cancelled</option></select></div>
         <div class="table-wrap"><table><thead><tr><th>Registration</th><th>Player</th><th>Tournament</th><th>Mode</th><th>Status</th><th>Created</th><th>Payment review</th><th>Action</th></tr></thead><tbody id="registrationsTable"></tbody></table></div>
