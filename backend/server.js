@@ -303,6 +303,7 @@ app.get("/api/tournaments", async (_req, res) => {
         ) AS verified_count
       FROM tournaments t
       WHERE t.status <> 'DRAFT'
+        AND t.status <> 'CANCELLED'
       ORDER BY
         t.start_at NULLS LAST,
         t.created_at DESC
@@ -329,6 +330,21 @@ app.get("/api/tournaments", async (_req, res) => {
     );
   }
 });
+
+app.get(
+  "/api/tournaments/cancelled",
+  auth("ADMIN"),
+  async (_req, res) => {
+    const r = await query(`
+      SELECT t.*,
+        (SELECT COUNT(*) FROM registrations r WHERE r.tournament_id=t.id) AS registrations_count
+      FROM tournaments t
+      WHERE t.status='CANCELLED'
+      ORDER BY t.updated_at DESC NULLS LAST, t.created_at DESC
+    `);
+    res.json({ok:true,tournaments:r.rows});
+  }
+);
 
 app.get(
   "/api/tournaments/:publicId",
