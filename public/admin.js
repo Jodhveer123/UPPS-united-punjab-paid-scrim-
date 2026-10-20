@@ -52,7 +52,7 @@ function renderTournaments(){
 }
 function renderRegistrations(){
   const filter=$("#registrationFilter").value; const rows=state.registrations.filter(r=>filter==="ALL"||r.status===filter);
-  $("#registrationsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.public_id)}</b><small>${esc(r.team_name||"")}</small></td><td><b>${esc(r.display_name||r.username)}</b><small>${esc(r.free_fire_uid||"")}</small></td><td>${esc(r.title)}</td><td>${esc(r.mode||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td><select class="registration-status" data-id="${r.id}"><option ${r.status==="PENDING"?"selected":""}>PENDING</option><option ${r.status==="VERIFIED"?"selected":""}>VERIFIED</option><option ${r.status==="REJECTED"?"selected":""}>REJECTED</option><option ${r.status==="WAITLISTED"?"selected":""}>WAITLISTED</option><option ${r.status==="CANCELLED"?"selected":""}>CANCELLED</option></select></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No registrations.</td></tr>`;
+  $("#registrationsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.public_id)}</b><small>${esc(r.team_name||"")}</small></td><td><b>${esc(r.display_name||r.username)}</b><small>UID: ${esc(r.free_fire_uid||"—")}</small></td><td>${esc(r.title)}<small>${r.entry_type==="PAID"?"₹"+Number(r.entry_fee||0).toFixed(2):"FREE"}</small></td><td>${esc(r.mode||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td>${r.entry_type==="PAID"?`<b>${esc(r.payment_status||"NOT_SUBMITTED")}</b><small>UTR: ${esc(r.utr||"Not submitted")}</small>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}`: "<span class='muted'>Not required</span>"}</td><td><select class="registration-status" data-id="${r.id}"><option value="PENDING" ${r.status==="PENDING"?"selected":""}>PENDING</option><option value="VERIFIED" ${r.status==="VERIFIED"?"selected":""}>VERIFIED</option><option value="REJECTED" ${r.status==="REJECTED"?"selected":""}>REJECTED</option><option value="WAITLISTED" ${r.status==="WAITLISTED"?"selected":""}>WAITLISTED</option><option value="CANCELLED" ${r.status==="CANCELLED"?"selected":""}>CANCELLED</option></select>${r.entry_type==="PAID"&&r.payment_status==="SUBMITTED"?`<div class="button-row"><button class="btn secondary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify payment</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject payment</button></div>`:""}</td></tr>`).join("")||`<tr><td colspan="8" class="empty">No registrations.</td></tr>`;
 }
 function localDateTimeValue(v){
   if(!v) return "";
@@ -141,6 +141,20 @@ $("#playersTable").addEventListener("click",async e=>{
 });
 $("#playersTable").addEventListener("change",async e=>{if(!e.target.classList.contains("player-status"))return;try{await api(`/api/admin/players/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadPlayers();renderPlayers();msg("Player status updated.");}catch(err){msg(err.message,true);}});
 $("#tournamentsList").addEventListener("change",async e=>{if(!e.target.classList.contains("tournament-status"))return;try{await api(`/api/admin/tournaments/${e.target.dataset.id}/status`,{method:"PATCH",body:JSON.stringify({status:e.target.value})});await loadTournaments();renderTournaments();msg("Tournament status updated.");}catch(err){msg(err.message,true);}});
+$("#registrationsTable").addEventListener("click",async e=>{
+  const button=e.target.closest(".payment-review");
+  if(!button)return;
+  const status=button.dataset.status;
+  const note=prompt(status==="VERIFIED"?"Optional payment verification note:":"Reason for rejecting this payment (required):","")||"";
+  if(status==="REJECTED"&&!note.trim()){msg("Enter a reason when rejecting a payment.",true);return;}
+  if(!confirm(status==="VERIFIED"?"Confirm you checked the payment against your payment account and the UTR?":"Reject this payment reference?"))return;
+  button.disabled=true;
+  try{
+    await api(`/api/admin/registrations/${button.dataset.id}/payment`,{method:"PATCH",body:JSON.stringify({paymentStatus:status,note})});
+    await loadRegistrations();renderRegistrations();renderDashboard();
+    msg(status==="VERIFIED"?"Payment verified. You can now approve the registration.":"Payment marked rejected. Player can submit a corrected reference.");
+  }catch(err){msg(err.message,true);}finally{button.disabled=false;}
+});
 $("#registrationsTable").addEventListener("change",async e=>{
   if(!e.target.classList.contains("registration-status"))return;
   const control=e.target;
