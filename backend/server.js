@@ -1180,6 +1180,11 @@ app.post(
       if (!reg.free_fire_uid || reg.free_fire_uid !== freeFireUid) return sendError(res, 400, "The Free Fire UID does not match your UPPS profile.");
       if (["REJECTED","CANCELLED"].includes(reg.status)) return sendError(res, 400, "This registration is not active.");
       if (reg.payment_status === "VERIFIED") return sendError(res, 409, "Payment is already verified. Contact the organizer if you think this is incorrect.");
+      const duplicate = await query(
+        `SELECT id FROM registrations WHERE UPPER(utr)=UPPER($1) AND id<>$2 LIMIT 1`,
+        [utr, reg.id]
+      );
+      if (duplicate.rowCount) return sendError(res, 409, "This transaction reference has already been used. Check the UTR and contact the organizer if you believe this is an error.");
       const saved = await query(
         `UPDATE registrations
          SET utr=$1, payment_status='SUBMITTED', payment_submitted_at=NOW(),
