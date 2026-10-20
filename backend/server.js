@@ -1843,6 +1843,10 @@ app.get(
   "/api/admin/registrations",
   auth("ADMIN"),
   async (_req, res) => {
+    try { await ensurePaymentColumns(); } catch (e) {
+      console.error("Payment migration error:", e);
+      return sendError(res, 500, "Payment database update is not ready. Please retry shortly.");
+    }
     const r = await query(
       `
       SELECT
@@ -1873,6 +1877,10 @@ app.patch(
   "/api/admin/registrations/:id/payment",
   auth("ADMIN"),
   async (req, res) => {
+    try { await ensurePaymentColumns(); } catch (e) {
+      console.error("Payment migration error:", e);
+      return sendError(res, 500, "Payment database update is not ready. Please retry shortly.");
+    }
     const paymentStatus = String(req.body?.paymentStatus || "");
     const note = String(req.body?.note || "").trim().slice(0,500);
     if (!["VERIFIED","REJECTED"].includes(paymentStatus)) {
