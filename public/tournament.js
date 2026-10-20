@@ -1,5 +1,6 @@
 
 const id = new URLSearchParams(location.search).get("id");
+let currentTournament = null;
 
 fetch("/api/tournaments/" + encodeURIComponent(id))
   .then(r => r.json())
@@ -7,6 +8,7 @@ fetch("/api/tournaments/" + encodeURIComponent(id))
     if (!d.ok) throw Error(d.error);
 
     const t = d.tournament;
+    currentTournament = t;
     document.title = t.title + " — UPPS";
 
     document.getElementById("app").innerHTML = `
@@ -253,6 +255,56 @@ async function openRegistrationWindow() {
   }
 }
 
+
+function paymentFormHTML(registration) {
+  return `
+    <form class="qr-payment-form" id="qrPaymentForm" data-registration="${esc(registration.public_id)}">
+      <h3>Submit your payment details</h3>
+      <p class="muted">After paying using the QR code above, enter your Free Fire UID and UTR/transaction reference here.</p>
+      <label>Free Fire UID
+        <input name="freeFireUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" placeholder="Enter your Free Fire UID" required>
+      </label>
+      <label>UTR / transaction reference
+        <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" placeholder="Enter UTR from your payment app" required>
+      </label>
+      <button class="btn primary" type="submit">Submit payment details</button>
+      <p class="muted qr-payment-message" role="status" aria-live="polite"></p>
+    </form>`;
+}
+
+function attachPaymentForm(modal, registration) {
+  const form = modal.querySelector("#qrPaymentForm");
+  if (!form) return;
+  const uid = form.elements.freeFireUid;
+  if (uid && !uid.value) {
+    fetch("/api/auth/me", {credentials:"same-origin"}).then(r=>r.json()).then(d=>{
+      if (d.ok && d.player && d.player.free_fire_uid) uid.value = d.player.free_fire_uid;
+    }).catch(()=>{});
+  }
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = form.querySelector('button[type="submit"]');
+    const message = form.querySelector(".qr-payment-message");
+    const values = new FormData(form);
+    button.disabled = true; button.textContent = "Submitting…"; message.textContent = "";
+    try {
+      const response = await fetch("/api/registrations/" + encodeURIComponent(registration.public_id) + "/payment", {
+        method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({freeFireUid:String(values.get("freeFireUid")||"").trim(),utr:String(values.get("utr")||"").trim()})
+      });
+      const data = await response.json().catch(()=>({}));
+      if (response.status===401) { location.href="/login.html"; return; }
+      if (!response.ok || !data.ok) throw new Error(data.error || "Could not submit payment details.");
+      message.textContent = "Payment details submitted. Admin will review your UTR.";
+      button.textContent = "Submitted for review";
+      button.disabled = true;
+    } catch(error) {
+      message.textContent = error.message || "Network error. Please try again.";
+      button.disabled = false; button.textContent = "Submit payment details";
+    }
+  });
+}
+
 /* =========================================================
    REGISTRATION MODAL
 ========================================================= */
@@ -307,6 +359,7 @@ function showRegistrationModal(registration, alreadyRegistered) {
         <a href="#" id="whatsappJoinBtn" class="btn">
           Join our WhatsApp for updates
         </a>
+        ${alreadyRegistered && currentTournament?.entry_type === "PAID" ? paymentFormHTML(registration) : ""}
       </div>
 
       ${
@@ -328,6 +381,7 @@ function showRegistrationModal(registration, alreadyRegistered) {
   `;
 
   document.body.appendChild(modal);
+  if (alreadyRegistered && currentTournament?.entry_type === "PAID") attachPaymentForm(modal, registration);
 
   const close = () => modal.remove();
 
@@ -455,6 +509,7 @@ function showSubmittedModal(registration) {
         <img src="qr.jpg" alt="payment QR Code" class="whatsapp-qr">
 
         <a href="#" id="whatsappJoinBtn" class="btn">Join WhatsApp Group</a>
+        ${currentTournament?.entry_type === "PAID" ? paymentFormHTML(registration) : ""}
       </div>
 
       <div class="modal-actions">
@@ -465,6 +520,7 @@ function showSubmittedModal(registration) {
   `;
 
   document.body.appendChild(modal);
+  if (currentTournament?.entry_type === "PAID") attachPaymentForm(modal, registration);
 
   const close = () => modal.remove();
 
