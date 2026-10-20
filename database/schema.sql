@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS registrations (
   status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PAYMENT_PENDING','VERIFIED','REJECTED','WAITLISTED','CANCELLED')),
   payment_id TEXT UNIQUE,
   utr TEXT,
+  payment_status TEXT NOT NULL DEFAULT 'NOT_REQUIRED' CHECK (payment_status IN ('NOT_REQUIRED','NOT_SUBMITTED','SUBMITTED','VERIFIED','REJECTED')),
+  payment_submitted_at TIMESTAMPTZ,
+  payment_verified_at TIMESTAMPTZ,
+  payment_note TEXT NOT NULL DEFAULT '',
   team_name TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   verified_at TIMESTAMPTZ,
@@ -141,3 +145,11 @@ CREATE TABLE IF NOT EXISTS account_recovery_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_account_recovery_status_created
   ON account_recovery_requests(status, created_at);
+
+
+-- Manual payment verification workflow (safe to run on existing databases).
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'NOT_SUBMITTED';
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_submitted_at TIMESTAMPTZ;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_note TEXT NOT NULL DEFAULT '';
+UPDATE registrations r SET payment_status='NOT_REQUIRED' FROM tournaments t WHERE t.id=r.tournament_id AND t.entry_type='FREE' AND r.payment_status='NOT_SUBMITTED';
