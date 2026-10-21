@@ -65,7 +65,7 @@ async function load() {
       </section>
       <section class="panel">
         <h2>Results</h2>
-        ${results.map(x => `<div class="row"><b>${esc(x.title)} — Match ${esc(x.match_number)}</b><span>#${esc(x.placement)} • ${esc(x.kills)} kills • ${esc(x.points)} pts</span></div>`).join("") || '<p class="muted">No results yet.</p>'}
+        ${results.map(x => `<div class="row"><b>${esc(x.title)}</b><span>#${esc(x.placement)} • ${esc(x.kills)} kills • ${esc(x.points)} pts</span></div>`).join("") || '<p class="muted">No results yet.</p>'}
       </section>
       <a class="btn" href="/tournaments.html">Find a tournament</a>
     `;
@@ -94,12 +94,12 @@ async function loadTournamentRooms(tournamentPublicId) {
       return;
     }
     if (!data.matches.length) {
-      target.innerHTML = `<p class="muted">No matches or room details have been added yet.</p>`;
+      target.innerHTML = `<p class="muted">Room details have not been added yet.</p>`;
       return;
     }
-    target.innerHTML = `<h3>Match room details</h3>` + data.matches.map(m => `
+    target.innerHTML = `<h3>Tournament room</h3>` + data.matches.map(m => `
       <div class="room-access-card">
-        <div class="row"><b>Match ${esc(m.match_number)}</b><span>${esc(m.status)}</span></div>
+        <div class="row"><b>Game room</b><span>${esc(m.status)}</span></div>
         ${m.released
           ? `<div class="row"><b>Room ID</b><code>${esc(m.room_id)}</code></div>
              <div class="row"><b>Password</b><code>${esc(m.room_password)}</code></div>`
