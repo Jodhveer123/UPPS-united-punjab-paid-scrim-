@@ -50,7 +50,7 @@ function renderPlayers(){
 function renderTournaments(){
   $("#tournamentsList").innerHTML=state.tournaments.map(t=>{
     const room=state.matches.find(m=>String(m.tournament_id)===String(t.id));
-    return `<div class="entity-card tournament-admin-card">
+    return `<div class="entity-card room-match-card tournament-admin-card">
       <div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · ${esc(t.entry_type)} · ₹${Number(t.entry_fee||0).toFixed(2)} · capacity ${esc(t.capacity)}</small><small>${esc(t.description||"")}</small></div>
       <div class="entity-actions tournament-actions"><select class="tournament-status" data-id="${t.id}" aria-label="Tournament status">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="btn secondary edit-tournament" data-id="${t.id}" type="button">Edit</button><button class="btn danger delete-tournament" data-id="${t.id}" type="button">Delete</button></div>
       <div class="tournament-room-settings">
