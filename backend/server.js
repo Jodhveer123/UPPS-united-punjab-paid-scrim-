@@ -42,6 +42,67 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
+/*
+  Small per-process rate limits for sensitive public endpoints.
+  These are deliberately dependency-free and do not alter the API contract.
+  On serverless hosting each warm instance has its own bucket; use an external
+  shared limiter if global cross-instance enforcement is needed.
+*/
+const rateLimitBuckets = new Map();
+
+function rateLimit({ key, windowMs, max, message }) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const clientIp = req.ip || req.socket?.remoteAddress || "unknown";
+    const bucketKey = `${key}:${clientIp}`;
+    let bucket = rateLimitBuckets.get(bucketKey);
+
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      rateLimitBuckets.set(bucketKey, bucket);
+    }
+
+    if (bucket.count >= max) {
+      res.set("Retry-After", String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))));
+      return sendError(res, 429, message);
+    }
+
+    bucket.count += 1;
+
+    // Keep the map bounded if a process receives many different client IPs.
+    if (rateLimitBuckets.size > 5000) {
+      for (const [storedKey, storedBucket] of rateLimitBuckets) {
+        if (storedBucket.resetAt <= now) rateLimitBuckets.delete(storedKey);
+      }
+      if (rateLimitBuckets.size > 10000) rateLimitBuckets.clear();
+    }
+
+    return next();
+  };
+}
+
+const playerLoginLimit = rateLimit({
+  key: "player-login", windowMs: 15 * 60 * 1000, max: 10,
+  message: "Too many login attempts. Please wait 15 minutes and try again."
+});
+const adminLoginLimit = rateLimit({
+  key: "admin-login", windowMs: 15 * 60 * 1000, max: 8,
+  message: "Too many admin login attempts. Please wait 15 minutes and try again."
+});
+const registrationLimit = rateLimit({
+  key: "player-register", windowMs: 60 * 60 * 1000, max: 8,
+  message: "Too many account creation attempts. Please try again in an hour."
+});
+const recoveryLimit = rateLimit({
+  key: "account-recovery", windowMs: 60 * 60 * 1000, max: 5,
+  message: "Too many recovery requests. Please try again in an hour."
+});
+const paymentSubmitLimit = rateLimit({
+  key: "payment-reference", windowMs: 15 * 60 * 1000, max: 8,
+  message: "Too many payment submissions. Please wait before trying again."
+});
+
+
 const frontendDir = path.join(__dirname, "..", "public");
 /* =========================================================
    HELPERS
@@ -362,6 +423,7 @@ app.get(
           ) AS verified_count
         FROM tournaments t
         WHERE t.public_id=$1
+          AND t.status NOT IN ('DRAFT','CANCELLED')
         `,
         [req.params.publicId]
       );
@@ -449,6 +511,7 @@ app.get(
 
 app.post(
   "/api/auth/register",
+  registrationLimit,
   async (req, res) => {
     const {
       username,
@@ -599,6 +662,7 @@ app.post(
 
 app.post(
   "/api/auth/login",
+  playerLoginLimit,
   async (req, res) => {
     const {
       username,
@@ -738,7 +802,7 @@ app.get(
 /* =========================================================
    ACCOUNT RECOVERY REQUESTS (manual verification; no email service)
 ========================================================= */
-app.post("/api/auth/recovery/request", async (req, res) => {
+app.post("/api/auth/recovery/request", recoveryLimit, async (req, res) => {
   const { requestType, username, contact, playerUid, details } = req.body || {};
   const type = String(requestType || "").toUpperCase();
   const safeUsername = String(username || "").trim().slice(0, 30);
@@ -1192,6 +1256,7 @@ app.get(
 
 app.post(
   "/api/registrations/:publicId/payment",
+  paymentSubmitLimit,
   auth("PLAYER"),
   async (req, res) => {
     try { await ensurePaymentColumns(); } catch (e) {
@@ -1466,6 +1531,7 @@ app.post(
 
 app.post(
   "/api/admin/login",
+  adminLoginLimit,
   async (req, res) => {
     const {
       username,
@@ -1922,79 +1988,77 @@ app.patch(
   "/api/admin/registrations/:id/status",
   auth("ADMIN"),
   async (req, res) => {
-    const status =
-      req.body.status;
+    const status = req.body?.status;
+    const registrationId = Number(req.params.id);
 
-    if (
-      ![
-        "VERIFIED",
-        "REJECTED",
-        "WAITLISTED",
-        "CANCELLED"
-      ].includes(status)
-    ) {
-      return sendError(
-        res,
-        400,
-        "Invalid registration status."
+    if (!["VERIFIED", "REJECTED", "WAITLISTED", "CANCELLED"].includes(status)) {
+      return sendError(res, 400, "Invalid registration status.");
+    }
+    if (!Number.isSafeInteger(registrationId) || registrationId < 1) {
+      return sendError(res, 400, "Invalid registration ID.");
+    }
+
+    const client = await pool.connect();
+    let updatedRegistration;
+
+    try {
+      await client.query("BEGIN");
+
+      // Lock the tournament row as well as this registration. New registrations
+      // already lock the same tournament row, so approvals cannot overbook slots.
+      const current = await client.query(
+        `SELECT r.id, r.status, r.payment_status, t.id AS tournament_id,
+                t.entry_type, t.capacity
+         FROM registrations r
+         JOIN tournaments t ON t.id=r.tournament_id
+         WHERE r.id=$1
+         FOR UPDATE OF t, r`,
+        [registrationId]
       );
-    }
 
-    const current = await query(
-      `SELECT r.id, r.payment_status, t.entry_type
-       FROM registrations r JOIN tournaments t ON t.id=r.tournament_id
-       WHERE r.id=$1`,
-      [req.params.id]
-    );
-    if (!current.rowCount) return sendError(res, 404, "Registration not found.");
-    if (status === "VERIFIED" && current.rows[0].entry_type === "PAID" && current.rows[0].payment_status !== "VERIFIED") {
-      return sendError(res, 400, "Verify this paid tournament's payment before approving the registration.");
-    }
-
-    const r = await query(
-      `
-      UPDATE registrations
-      SET
-        status=$1,
-        verified_at=
-          CASE
-            WHEN $1='VERIFIED'
-            THEN NOW()
-            ELSE verified_at
-          END
-      WHERE id=$2
-      RETURNING *
-      `,
-      [
-        status,
-        req.params.id
-      ]
-    );
-
-    if (!r.rowCount) {
-      return sendError(
-        res,
-        404,
-        "Registration not found."
-      );
-    }
-
-    await audit(
-      "ADMIN",
-      req.auth.id,
-      "REGISTRATION_STATUS",
-      "REGISTRATION",
-      r.rows[0].id,
-      {
-        status
+      if (!current.rowCount) {
+        await client.query("ROLLBACK");
+        return sendError(res, 404, "Registration not found.");
       }
-    );
 
-    res.json({
-      ok: true,
-      registration:
-        r.rows[0]
-    });
+      const row = current.rows[0];
+      if (status === "VERIFIED" && row.entry_type === "PAID" && row.payment_status !== "VERIFIED") {
+        await client.query("ROLLBACK");
+        return sendError(res, 400, "Verify this paid tournament's payment before approving the registration.");
+      }
+
+      if (status === "VERIFIED" && row.status !== "VERIFIED") {
+        const count = await client.query(
+          "SELECT COUNT(*)::int AS n FROM registrations WHERE tournament_id=$1 AND status='VERIFIED'",
+          [row.tournament_id]
+        );
+        if (Number(count.rows[0].n) >= Number(row.capacity)) {
+          await client.query("ROLLBACK");
+          return sendError(res, 409, "This tournament is full. Increase capacity or free a slot before approving another player.");
+        }
+      }
+
+      const updated = await client.query(
+        `UPDATE registrations
+         SET status=$1,
+             verified_at=CASE WHEN $1='VERIFIED' THEN COALESCE(verified_at, NOW()) ELSE verified_at END
+         WHERE id=$2
+         RETURNING *`,
+        [status, registrationId]
+      );
+
+      updatedRegistration = updated.rows[0];
+      await client.query("COMMIT");
+    } catch (e) {
+      try { await client.query("ROLLBACK"); } catch {}
+      console.error("Registration status update error:", e.message);
+      return sendError(res, 500, "Could not update registration status.");
+    } finally {
+      client.release();
+    }
+
+    await audit("ADMIN", req.auth.id, "REGISTRATION_STATUS", "REGISTRATION", updatedRegistration.id, { status });
+    return res.json({ ok: true, registration: updatedRegistration });
   }
 );
 
