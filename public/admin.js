@@ -66,7 +66,7 @@ function renderTournaments(){
       </div>
     </div>`;
   }).join("")||"<div class='empty'>No tournaments.</div>";
-  $("#resultMatch").innerHTML=state.matches.map(m=>`<option value="${m.id}">${esc(m.title)}</option>`).join("");
+  $("#resultMatch").innerHTML=state.matches.filter(m=>!["COMPLETED","RESULTS FINAL","CANCELLED","SUSPENDED","DELETED"].includes(String(m.tournament_status||"").toUpperCase())).map(m=>`<option value="${m.id}">${esc(m.title)}</option>`).join("");
 }
 function renderCancelled(){
   const el=$("#cancelledTournamentsList"); if(!el)return;
