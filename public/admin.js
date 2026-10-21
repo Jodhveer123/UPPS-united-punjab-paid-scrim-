@@ -214,10 +214,10 @@ $("#paymentsTable").addEventListener("click",async e=>{
     const message=events.length?events.map(item=>{
       const amount=item.amount==null?"—":"₹"+Number(item.amount).toFixed(2);
       const transition=(item.previous_status||"—")+" → "+item.new_status;
-      const note=item.note?("\\nNote: "+item.note):"";
+      const note=item.note?("\nNote: "+item.note):"";
       return fmt(item.created_at)+" | "+item.event_type+" | "+transition+" | "+amount+" | UTR: "+(item.utr||"—")+note;
-    }).join("\\n\\n"):"No payment history has been recorded for this registration yet.";
-    alert("UPPS Payment History\\n\\n"+message);
+    }).join("\n\n"):"No payment history has been recorded for this registration yet.";
+    alert("UPPS Payment History\n\n"+message);
   }catch(err){msg(err.message,true);}finally{button.disabled=false;}
 });
 $("#registrationsTable").addEventListener("click",async e=>{
