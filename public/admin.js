@@ -48,8 +48,25 @@ function renderPlayers(){
   $("#playersTable").innerHTML=rows.map(p=>`<tr><td><b>${esc(p.display_name||"—")}</b><small>${esc(p.public_id)}</small></td><td>${esc(p.username)}</td><td>${esc(p.free_fire_uid||"—")}</td><td>${esc(p.email||p.phone||"—")}</td><td>${pill(p.status)}</td><td>${fmt(p.created_at)}</td><td><select class="player-status" data-id="${p.id}"><option ${p.status==="ACTIVE"?"selected":""}>ACTIVE</option><option ${p.status==="SUSPENDED"?"selected":""}>SUSPENDED</option><option ${p.status==="BANNED"?"selected":""}>BANNED</option></select><button class="btn secondary change-player-username" data-id="${p.id}" data-username="${esc(p.username)}" type="button">Change username</button> <button class="btn secondary reset-player-password" data-id="${p.id}" data-username="${esc(p.username)}" data-email="${esc(p.email||"")}" type="button">Reset password</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No players found.</td></tr>`;
 }
 function renderTournaments(){
-  $("#tournamentsList").innerHTML=state.tournaments.map(t=>`<div class="entity-card"><div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · ${esc(t.entry_type)} · ₹${Number(t.entry_fee||0).toFixed(2)} · capacity ${esc(t.capacity)}</small><small>${esc(t.description||"")}</small></div><div class="entity-actions tournament-actions"><select class="tournament-status" data-id="${t.id}" aria-label="Tournament status">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="btn secondary edit-tournament" data-id="${t.id}" type="button">Edit</button><button class="btn danger delete-tournament" data-id="${t.id}" type="button">Delete</button></div></div>`).join("")||"<div class='empty'>No tournaments.</div>";
-  $("#matchTournament").innerHTML=state.tournaments.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  $("#tournamentsList").innerHTML=state.tournaments.map(t=>{
+    const room=state.matches.find(m=>String(m.tournament_id)===String(t.id));
+    return `<div class="entity-card tournament-admin-card">
+      <div><b>${esc(t.title)}</b><small>${esc(t.public_id)} · ${esc(t.mode)} · ${esc(t.entry_type)} · ₹${Number(t.entry_fee||0).toFixed(2)} · capacity ${esc(t.capacity)}</small><small>${esc(t.description||"")}</small></div>
+      <div class="entity-actions tournament-actions"><select class="tournament-status" data-id="${t.id}" aria-label="Tournament status">${["DRAFT","PUBLISHED","REGISTRATION OPEN","REGISTRATION CLOSED","READY","LIVE","RESULTS PENDING","RESULTS FINAL","COMPLETED","CANCELLED","SUSPENDED"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="btn secondary edit-tournament" data-id="${t.id}" type="button">Edit</button><button class="btn danger delete-tournament" data-id="${t.id}" type="button">Delete</button></div>
+      <div class="tournament-room-settings">
+        <h3>Tournament Room</h3>
+        ${room ? `<small class="muted">${room.room_enabled?"Published to approved players (release time applies)":"Hidden from players"} · ${room.room_release_at? "Release: "+esc(fmt(room.room_release_at)):"Release immediately when published"}</small>
+        <form class="room-credentials-form form-grid" data-id="${room.id}" data-tournament-id="${t.id}">
+          <label>Room ID<input name="roomId" value="${esc(room.room_id||"")}" autocomplete="off" maxlength="100"></label>
+          <label>Room Password<input name="roomPassword" value="${esc(room.room_password||"")}" autocomplete="off" maxlength="100"></label>
+          <label>Release Date &amp; Time<input name="roomReleaseAt" type="datetime-local" value="${esc(localDateTimeValue(room.room_release_at))}"><small>Blank means release immediately when published.</small></label>
+          <label class="check-label"><input name="roomEnabled" type="checkbox" value="true" ${room.room_enabled?"checked":""}> Publish to approved players</label>
+          <button class="btn secondary full" type="submit">Save Room Settings</button>
+        </form>` : `<p class="muted">Room settings are being prepared. Refresh in a moment.</p>`}
+      </div>
+    </div>`;
+  }).join("")||"<div class='empty'>No tournaments.</div>";
+  $("#resultMatch").innerHTML=state.matches.map(m=>`<option value="${m.id}">${esc(m.title)}</option>`).join("");
 }
 function renderCancelled(){
   const el=$("#cancelledTournamentsList"); if(!el)return;
@@ -80,19 +97,7 @@ function dateTimeLocalToISO(v){
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 function renderMatches(){
-  $("#matchesList").innerHTML=state.matches.map(m=>`
-    <div class="entity-card room-match-card">
-      <div><b>${esc(m.title)} · Match ${esc(m.match_number)}</b><small>${esc(m.public_id)} · ${pill(m.status)} · starts ${fmt(m.start_at)}</small></div>
-      <form class="room-credentials-form form-grid" data-id="${m.id}">
-        <label>Room ID<input name="roomId" value="${esc(m.room_id||"")}" autocomplete="off"></label>
-        <label>Room Password<input name="roomPassword" value="${esc(m.room_password||"")}" autocomplete="off"></label>
-        <label>Release Date &amp; Time<input name="roomReleaseAt" type="datetime-local" value="${esc(localDateTimeValue(m.room_release_at))}"><small>Blank means release as soon as published.</small></label>
-        <label class="check-label"><input name="roomEnabled" type="checkbox" value="true" ${m.room_enabled?"checked":""}> Publish to approved players</label>
-        <button class="btn secondary full" type="submit">Save Room Settings</button>
-        <small class="muted">Current status: ${m.room_enabled ? "Published (release time still applies)" : "Hidden from players"}</small>
-      </form>
-    </div>`).join("")||"<div class='empty'>No matches.</div>";
-  $("#resultMatch").innerHTML=state.matches.map(m=>`<option value="${m.id}">${esc(m.title)} · Match ${esc(m.match_number)}</option>`).join("");
+  // Kept as a no-op so the existing render pipeline can remain unchanged.
 }
 function playerOptions(){ return state.players.map(p=>`<option value="${p.id}">${esc(p.display_name||p.username)} · ${esc(p.free_fire_uid||p.public_id)}</option>`).join(""); }
 function addResultRow(){
@@ -131,12 +136,11 @@ $("#refreshAudit").addEventListener("click",async()=>{await loadAudit();renderAu
 $("#refreshRecovery").addEventListener("click",async()=>{await loadRecovery();renderRecovery();});
 $("#recoveryTable").addEventListener("click",async e=>{const b=e.target.closest(".close-recovery");if(!b)return;try{await api("/api/admin/recovery-requests/"+b.dataset.id+"/close",{method:"POST"});await loadRecovery();renderRecovery();msg("Recovery request marked reviewed.");}catch(err){msg(err.message,true);}});
 
-$("#tournamentForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());try{await api("/api/admin/tournaments",{method:"POST",body:JSON.stringify({...b,capacity:Number(b.capacity),matchesCount:Number(b.matchesCount||1)})});e.target.reset();msg("Tournament created.");await loadTournaments();renderAll();}catch(err){msg(err.message,true);}});
-$("#matchForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());b.roomEnabled=f.has("roomEnabled");b.roomReleaseAt=dateTimeLocalToISO(b.roomReleaseAt);b.startAt=dateTimeLocalToISO(b.startAt);try{await api(`/api/admin/tournaments/${b.tournamentId}/matches`,{method:"POST",body:JSON.stringify({...b,matchNumber:Number(b.matchNumber)})});e.target.reset();msg("Match created.");await loadMatches();renderAll();}catch(err){msg(err.message,true);}});
-$("#matchesList").addEventListener("submit",async e=>{const form=e.target.closest(".room-credentials-form");if(!form)return;e.preventDefault();const f=new FormData(form);const b=Object.fromEntries(f.entries());b.roomEnabled=f.has("roomEnabled");b.roomReleaseAt=dateTimeLocalToISO(b.roomReleaseAt);try{await api(`/api/admin/matches/${form.dataset.id}/room`,{method:"PATCH",body:JSON.stringify(b)});msg("Room settings saved.");await loadMatches();renderMatches();}catch(err){msg(err.message,true);}});
+$("#tournamentForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());try{await api("/api/admin/tournaments",{method:"POST",body:JSON.stringify({...b,capacity:Number(b.capacity),matchesCount:1})});e.target.reset();msg("Tournament created.");await Promise.all([loadTournaments(),loadMatches()]);renderAll();}catch(err){msg(err.message,true);}});
+$("#tournamentsList").addEventListener("submit",async e=>{const form=e.target.closest(".room-credentials-form");if(!form)return;e.preventDefault();const f=new FormData(form);const b=Object.fromEntries(f.entries());b.roomEnabled=f.has("roomEnabled");b.roomReleaseAt=dateTimeLocalToISO(b.roomReleaseAt);try{await api(`/api/admin/tournaments/${form.dataset.tournamentId}/matches`,{method:"POST",body:JSON.stringify(b)});msg("Tournament room settings saved.");await loadMatches();renderAll();}catch(err){msg(err.message,true);}});
 $("#addResultRow").addEventListener("click",addResultRow); addResultRow();
 $("#resultRows").addEventListener("click",e=>{if(e.target.classList.contains("remove-result")){if($("#resultRows").children.length>1)e.target.parentElement.remove();}});
-$("#resultForm").addEventListener("submit",async e=>{e.preventDefault();const rows=$$(".result-row").map(r=>({playerId:Number(r.querySelector(".result-player").value),placement:Number(r.querySelector(".result-placement").value),kills:Number(r.querySelector(".result-kills").value||0),points:Number(r.querySelector(".result-points").value||0),notes:r.querySelector(".result-notes").value}));try{await api(`/api/admin/matches/${$("#resultMatch").value}/results`,{method:"POST",body:JSON.stringify({results:rows})});$("#resultMessage").textContent="Results saved.";await loadMatches();renderMatches();}catch(err){$("#resultMessage").textContent=err.message;}});
+$("#resultForm").addEventListener("submit",async e=>{e.preventDefault();const rows=$$(".result-row").map(r=>({playerId:Number(r.querySelector(".result-player").value),placement:Number(r.querySelector(".result-placement").value),kills:Number(r.querySelector(".result-kills").value||0),points:Number(r.querySelector(".result-points").value||0),notes:r.querySelector(".result-notes").value}));try{await api(`/api/admin/matches/${$("#resultMatch").value}/results`,{method:"POST",body:JSON.stringify({results:rows})});$("#resultMessage").textContent="Tournament results saved.";await loadMatches();renderAll();}catch(err){$("#resultMessage").textContent=err.message;}});
 $("#staffForm").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.target);const b=Object.fromEntries(f.entries());try{await api("/api/admin/staff",{method:"POST",body:JSON.stringify(b)});e.target.reset();msg("Staff account created.");await loadStaff();renderStaff();}catch(err){msg(err.message,true);}});
 
 $("#playersTable").addEventListener("click",async e=>{
@@ -168,19 +172,19 @@ $("#tournamentsList").addEventListener("click",async e=>{
     const entryType=prompt("Entry type: FREE or PAID",t.entry_type); if(entryType===null)return;
     const entryFee=prompt("Entry fee (₹):",String(t.entry_fee||0)); if(entryFee===null)return;
     const capacity=prompt("Player capacity:",String(t.capacity)); if(capacity===null)return;
-    const matchesCount=prompt("Number of matches:",String(t.matches_count||1)); if(matchesCount===null)return;
+    
     const mode=prompt("Mode: SOLO, DUO or SQUAD",t.mode); if(mode===null)return;
     const status=prompt("Status (e.g. REGISTRATION OPEN, PUBLISHED, LIVE, COMPLETED, CANCELLED):",t.status); if(status===null)return;
     const rules=prompt("Rules:",t.rules||""); if(rules===null)return;
     const prizeSummary=prompt("Prize information:",t.prize_summary||""); if(prizeSummary===null)return;
     try{
-      await api(`/api/admin/tournaments/${t.id}`,{method:"PATCH",body:JSON.stringify({title,description,entryType:entryType.trim().toUpperCase(),entryFee:Number(entryFee),capacity:Number(capacity),matchesCount:Number(matchesCount),mode:mode.trim().toUpperCase(),status:status.trim().toUpperCase(),scoringType:t.scoring_type||"CUSTOM",startAt:t.start_at||null,registrationCloseAt:t.registration_close_at||null,rules,prizeSummary})});
+      await api(`/api/admin/tournaments/${t.id}`,{method:"PATCH",body:JSON.stringify({title,description,entryType:entryType.trim().toUpperCase(),entryFee:Number(entryFee),capacity:Number(capacity),matchesCount:1,mode:mode.trim().toUpperCase(),status:status.trim().toUpperCase(),scoringType:t.scoring_type||"CUSTOM",startAt:t.start_at||null,registrationCloseAt:t.registration_close_at||null,rules,prizeSummary})});
       await loadTournaments();renderAll();msg("Tournament updated.");
     }catch(err){msg(err.message,true);}
   }
   if(del){
     const t=state.tournaments.find(x=>String(x.id)===del.dataset.id);if(!t)return;
-    if(!confirm(`Delete "${t.title}"? This is allowed only if it has no registrations or matches.`))return;
+    if(!confirm(`Delete "${t.title}"? This is allowed only if it has no registrations or tournament activity.`))return;
     try{await api(`/api/admin/tournaments/${t.id}`,{method:"DELETE"});await loadTournaments();renderAll();msg("Tournament deleted.");}
     catch(err){msg(err.message,true);}
   }
