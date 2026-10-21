@@ -31,7 +31,6 @@
         <button data-section="cancelled">Cancelled Tournaments</button>
         <button data-section="registrations">Registrations</button>
         <button data-section="payments">Payment Verification</button>
-        <button data-section="matches">Matches</button>
         <button data-section="results">Results</button>
         <button data-section="reviews">Reviews</button>
         <button data-section="staff">Staff</button>
@@ -96,7 +95,6 @@
   <input name="entryFee" type="number" min="0" value="0" required>
 </label>
               <label>Capacity<input name="capacity" type="number" min="1" required></label>
-              <label>Matches<input name="matchesCount" type="number" min="1" value="1"></label>
               <label class="full">Description<textarea name="description"></textarea></label>
               <label>Status<select name="status"><option>DRAFT</option><option>PUBLISHED</option><option>REGISTRATION OPEN</option></select></label>
               <label>Scoring Type<input name="scoringType" value="CUSTOM"></label>
@@ -130,15 +128,8 @@
         <div class="table-wrap"><table><thead><tr><th>Player / UID</th><th>Tournament</th><th>Entry fee</th><th>UTR</th><th>Payment status</th><th>Registration</th><th>Review action</th></tr></thead><tbody id="paymentsTable"><tr><td colspan="7" class="empty">Search for a player to review payments.</td></tr></tbody></table></div>
       </section>
 
-      <section id="section-matches" class="admin-section">
-        <div class="admin-grid-2">
-          <div class="admin-card"><h2>Create Match</h2><form id="matchForm" class="form-grid"><label>Tournament<select id="matchTournament" name="tournamentId" required></select></label><label>Match Number<input name="matchNumber" type="number" min="1" required></label><label>Room ID<input name="roomId" autocomplete="off"></label><label>Room Password<input name="roomPassword" autocomplete="off"></label><label>Release Date &amp; Time<input name="roomReleaseAt" type="datetime-local"><small>Leave blank to release immediately when publishing.</small></label><label class="check-label"><input name="roomEnabled" type="checkbox" value="true"> Publish room credentials to approved players</label><label>Match Start Time<input name="startAt" type="datetime-local"></label><button class="btn primary full" type="submit">Create Match</button></form></div>
-          <div class="admin-card"><h2>Matches</h2><div id="matchesList" class="list"></div></div>
-        </div>
-      </section>
-
       <section id="section-results" class="admin-section">
-        <div class="admin-card"><h2>Enter Match Results</h2><p class="muted">Add one or more player result rows, then save them together.</p><form id="resultForm"><label>Match<select id="resultMatch" required></select></label><div id="resultRows" class="result-rows"></div><div class="button-row"><button type="button" id="addResultRow" class="btn secondary">+ Add Player</button><button type="submit" class="btn primary">Save Results</button></div></form><div id="resultMessage" class="admin-message"></div></div>
+        <div class="admin-card"><h2>Enter Tournament Results</h2><p class="muted">Add final placements for the players in this tournament's single game.</p><form id="resultForm"><label>Tournament<select id="resultMatch" required></select></label><div id="resultRows" class="result-rows"></div><div class="button-row"><button type="button" id="addResultRow" class="btn secondary">+ Add Player</button><button type="submit" class="btn primary">Save Results</button></div></form><div id="resultMessage" class="admin-message"></div></div>
       </section>
 
       <section id="section-reviews" class="admin-section">
