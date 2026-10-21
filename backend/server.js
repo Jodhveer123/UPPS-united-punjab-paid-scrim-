@@ -1406,6 +1406,12 @@ app.get(
       JOIN tournaments t
         ON t.id=m.tournament_id
       WHERE res.player_id=$1
+        AND m.id=(
+          SELECT m2.id FROM matches m2
+          WHERE m2.tournament_id=t.id
+          ORDER BY m2.match_number, m2.id
+          LIMIT 1
+        )
       ORDER BY
         t.start_at DESC NULLS LAST,
         m.match_number
@@ -1850,11 +1856,11 @@ app.delete(
     const check = await query("SELECT id,title FROM tournaments WHERE id=$1",[req.params.id]);
     if (!check.rowCount) return sendError(res,404,"Tournament not found.");
     const activity = await query(
-      "SELECT (SELECT COUNT(*) FROM registrations WHERE tournament_id=$1) AS registrations, (SELECT COUNT(*) FROM matches WHERE tournament_id=$1) AS matches",
+      "SELECT (SELECT COUNT(*) FROM registrations WHERE tournament_id=$1) AS registrations, (SELECT COUNT(*) FROM results res JOIN matches m ON m.id=res.match_id WHERE m.tournament_id=$1) AS results",
       [req.params.id]
     );
-    if (Number(activity.rows[0].registrations)>0 || Number(activity.rows[0].matches)>0) {
-      return sendError(res,409,"This tournament has registrations or matches. Change its status to CANCELLED instead of deleting records and payment history.");
+    if (Number(activity.rows[0].registrations)>0 || Number(activity.rows[0].results)>0) {
+      return sendError(res,409,"This tournament has registrations or results. Change its status to CANCELLED instead of deleting tournament history.");
     }
     await query("DELETE FROM tournaments WHERE id=$1",[req.params.id]);
     await audit("ADMIN",req.auth.id,"DELETE","TOURNAMENT",req.params.id,{title:check.rows[0].title});
@@ -2320,6 +2326,12 @@ app.get(
       JOIN players p
         ON p.id=res.player_id
       WHERE t.public_id=$1
+        AND m.id=(
+          SELECT m2.id FROM matches m2
+          WHERE m2.tournament_id=t.id
+          ORDER BY m2.match_number, m2.id
+          LIMIT 1
+        )
       GROUP BY p.id
       ORDER BY
         points DESC,
