@@ -125,6 +125,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_reg_tournament_status ON registrations(tournament_id, status);
+CREATE INDEX IF NOT EXISTS idx_reg_utr_upper ON registrations(UPPER(utr)) WHERE utr IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_tournaments_status_start_at ON tournaments(status, start_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reg_player ON registrations(player_id);
 CREATE INDEX IF NOT EXISTS idx_results_player ON results(player_id);
 CREATE INDEX IF NOT EXISTS idx_results_match ON results(match_id);
