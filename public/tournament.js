@@ -488,7 +488,7 @@ function showSubmittedModal(registration) {
       <div class="whatsapp-section">
         <h3>Join our WhatsApp group</h3>
         <p class="muted">
-          You can pay match fees on this qr. If tournament is free of fees then you skip it. Your registration will checked and also payment if entry fees needed. It requires organizer verification.
+          You can pay the tournament entry fee using this QR. If the tournament is free, skip payment. Your registration and any required payment will be checked by the organizer.
         </p>
 
         <img src="qr.jpg" alt="payment QR Code" class="whatsapp-qr">
