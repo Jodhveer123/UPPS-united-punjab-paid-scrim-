@@ -78,7 +78,7 @@ function renderPayments(){
   const q=input.value.trim().toLowerCase();
   const rows=state.registrations.filter(r=>r.entry_type==="PAID" && q && [r.free_fire_uid,r.username,r.display_name,r.public_id,r.title,r.utr].some(v=>String(v||"").toLowerCase().includes(q)));
   $("#paymentSearchHint").textContent=!q?"Enter at least part of a UID or username to find registrations.":`${rows.length} paid registration(s) found.`;
-  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>${esc(r.public_id)}</small></td><td>₹${Number(r.entry_fee||0).toFixed(2)}</td><td>${esc(r.utr||"Not submitted")}</td><td><b>${esc(r.payment_status||"NOT_SUBMITTED")}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td>${r.payment_status==="SUBMITTED"?`<div class="payment-action-stack"><button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button></div>`:r.payment_status==="VERIFIED"?"Verified":r.payment_status==="REJECTED"?"Rejected — player may resubmit":"Awaiting player UTR"}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No paid registration matched that search.":"Search by player UID to see payment records."}</td></tr>`;
+  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>${esc(r.public_id)}</small></td><td>₹${Number(r.entry_fee||0).toFixed(2)}</td><td>${esc(r.utr||"Not submitted")}</td><td><b>${esc(r.payment_status||"NOT_SUBMITTED")}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td>${r.payment_status==="SUBMITTED"?`<div class="payment-action-stack"><button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button></div>`:r.payment_status==="VERIFIED"?"Verified":r.payment_status==="REJECTED"?"Rejected — player may resubmit":"Awaiting player UTR"}<button class="btn secondary payment-history" data-id="${r.id}" type="button">History</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No paid registration matched that search.":"Search by player UID to see payment records."}</td></tr>`;
 }
 function renderRegistrations(){
   const filter=$("#registrationFilter").value; const rows=state.registrations.filter(r=>filter==="ALL"||r.status===filter);
@@ -204,6 +204,21 @@ $("#paymentsTable").addEventListener("click",async e=>{
   button.disabled=true;
   try{await api(`/api/admin/registrations/${button.dataset.id}/payment`,{method:"PATCH",body:JSON.stringify({paymentStatus:status,note})});await loadRegistrations();renderRegistrations();renderPayments();renderDashboard();msg(status==="VERIFIED"?"Payment verified. Approve the registration separately.":"Payment rejected. The player can submit a corrected UTR.");}
   catch(err){msg(err.message,true);}finally{button.disabled=false;}
+});
+$("#paymentsTable").addEventListener("click",async e=>{
+  const button=e.target.closest(".payment-history");if(!button)return;
+  button.disabled=true;
+  try{
+    const data=await api(`/api/admin/registrations/${button.dataset.id}/payment-history`);
+    const events=data.events||[];
+    const message=events.length?events.map(item=>{
+      const amount=item.amount==null?"—":"₹"+Number(item.amount).toFixed(2);
+      const transition=(item.previous_status||"—")+" → "+item.new_status;
+      const note=item.note?("\\nNote: "+item.note):"";
+      return fmt(item.created_at)+" | "+item.event_type+" | "+transition+" | "+amount+" | UTR: "+(item.utr||"—")+note;
+    }).join("\\n\\n"):"No payment history has been recorded for this registration yet.";
+    alert("UPPS Payment History\\n\\n"+message);
+  }catch(err){msg(err.message,true);}finally{button.disabled=false;}
 });
 $("#registrationsTable").addEventListener("click",async e=>{
   const button=e.target.closest(".payment-review");
