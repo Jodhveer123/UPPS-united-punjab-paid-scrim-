@@ -156,3 +156,43 @@ ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_submitted_at TIMESTAM
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ;
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_note TEXT NOT NULL DEFAULT '';
 UPDATE registrations r SET payment_status='NOT_REQUIRED' FROM tournaments t WHERE t.id=r.tournament_id AND t.entry_type='FREE' AND r.payment_status='NOT_SUBMITTED';
+
+-- Manual payment hardening: permanently claim submitted UTRs and retain payment history.
+-- Claims intentionally do not cascade with registrations so a deleted registration cannot
+-- make an already-used transaction reference available for reuse.
+CREATE TABLE IF NOT EXISTS payment_reference_claims (
+  normalized_utr TEXT PRIMARY KEY,
+  registration_id BIGINT NOT NULL,
+  original_utr TEXT NOT NULL,
+  claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_payment_reference_claims_registration
+  ON payment_reference_claims(registration_id);
+
+INSERT INTO payment_reference_claims(normalized_utr, registration_id, original_utr, claimed_at)
+SELECT DISTINCT ON (UPPER(BTRIM(utr)))
+  UPPER(BTRIM(utr)), id, utr, COALESCE(payment_submitted_at, created_at)
+FROM registrations
+WHERE utr IS NOT NULL AND BTRIM(utr) <> ''
+ORDER BY UPPER(BTRIM(utr)), payment_submitted_at NULLS LAST, id
+ON CONFLICT (normalized_utr) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS payment_events (
+  id BIGSERIAL PRIMARY KEY,
+  registration_id BIGINT NOT NULL,
+  tournament_id BIGINT,
+  actor_type TEXT NOT NULL CHECK (actor_type IN ('PLAYER','ADMIN','SYSTEM')),
+  actor_id BIGINT,
+  event_type TEXT NOT NULL,
+  previous_status TEXT,
+  new_status TEXT NOT NULL,
+  utr TEXT,
+  amount NUMERIC(12,2),
+  note TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_payment_events_registration_created
+  ON payment_events(registration_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payment_events_created
+  ON payment_events(created_at DESC);
+
