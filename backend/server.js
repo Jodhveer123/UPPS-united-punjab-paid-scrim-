@@ -2125,6 +2125,14 @@ app.patch(
         await client.query("ROLLBACK"); transactionOpen = false;
         return sendError(res, 409, "Only a submitted payment with a transaction reference can be reviewed. Refresh the payment list.");
       }
+      const utrClaim = await client.query(
+        "SELECT registration_id FROM payment_reference_claims WHERE normalized_utr=$1",
+        [String(row.utr).trim().toUpperCase()]
+      );
+      if (!utrClaim.rowCount || String(utrClaim.rows[0].registration_id) !== String(row.id)) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 409, "This UTR is already associated with another registration. Check the transaction and resolve the duplicate before reviewing this payment.");
+      }
 
       const updated = await client.query(
         `UPDATE registrations
