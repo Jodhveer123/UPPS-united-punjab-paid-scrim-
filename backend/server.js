@@ -2053,6 +2053,36 @@ app.get(
   }
 );
 
+app.get(
+  "/api/admin/registrations/:id/payment-history",
+  auth("ADMIN"),
+  async (req, res) => {
+    try { await ensurePaymentColumns(); } catch (e) {
+      console.error("Payment migration error:", e);
+      return sendError(res, 500, "Payment history is not ready. Please retry shortly.");
+    }
+    const registrationId = Number(req.params.id);
+    if (!Number.isSafeInteger(registrationId) || registrationId <= 0) return sendError(res, 400, "Invalid registration ID.");
+    try {
+      const exists = await query("SELECT id FROM registrations WHERE id=$1", [registrationId]);
+      if (!exists.rowCount) return sendError(res, 404, "Registration not found.");
+      const r = await query(
+        `SELECT id, actor_type, actor_id, event_type, previous_status, new_status,
+                utr, amount, note, created_at
+         FROM payment_events
+         WHERE registration_id=$1
+         ORDER BY created_at DESC, id DESC
+         LIMIT 100`,
+        [registrationId]
+      );
+      return res.json({ok:true, events:r.rows});
+    } catch (e) {
+      console.error("Payment history error:", e.message);
+      return sendError(res, 500, "Could not load payment history.");
+    }
+  }
+);
+
 app.patch(
   "/api/admin/registrations/:id/payment",
   auth("ADMIN"),
