@@ -68,21 +68,6 @@ fetch("/api/tournaments/" + encodeURIComponent(id))
       </div>
 
       <section class="panel">
-        <h2>Matches</h2>
-        <div>
-          ${
-            (d.matches || []).map(m => `
-              <div class="row">
-                <b>Match ${esc(m.match_number)}</b>
-                <span>${esc(m.status)}</span>
-              </div>
-            `).join("") ||
-            '<div class="muted">Matches will appear here.</div>'
-          }
-        </div>
-      </section>
-
-      <section class="panel">
         <h2>Leaderboard</h2>
         <div id="lb">Loading…</div>
       </section>
