@@ -2063,22 +2063,72 @@ app.patch(
     }
     const paymentStatus = String(req.body?.paymentStatus || "");
     const note = String(req.body?.note || "").trim().slice(0,500);
-    if (!["VERIFIED","REJECTED"].includes(paymentStatus)) {
-      return sendError(res, 400, "Payment status must be VERIFIED or REJECTED.");
+    const registrationId = Number(req.params.id);
+    if (!Number.isSafeInteger(registrationId) || registrationId <= 0) return sendError(res, 400, "Invalid registration ID.");
+    if (!["VERIFIED","REJECTED"].includes(paymentStatus)) return sendError(res, 400, "Payment status must be VERIFIED or REJECTED.");
+    if (paymentStatus === "REJECTED" && !note) return sendError(res, 400, "A reason is required when rejecting a payment.");
+
+    const client = await pool.connect();
+    let transactionOpen = false;
+    try {
+      await client.query("BEGIN");
+      transactionOpen = true;
+      const current = await client.query(
+        `SELECT r.id, r.payment_status, r.utr, t.id AS tournament_id,
+                t.entry_type, t.entry_fee
+         FROM registrations r
+         JOIN tournaments t ON t.id=r.tournament_id
+         WHERE r.id=$1
+         FOR UPDATE OF r, t`,
+        [registrationId]
+      );
+      if (!current.rowCount) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 404, "Registration not found.");
+      }
+      const row = current.rows[0];
+      if (row.entry_type !== "PAID") {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 404, "Paid registration not found.");
+      }
+      if (row.payment_status !== "SUBMITTED" || !String(row.utr || "").trim()) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 409, "Only a submitted payment with a transaction reference can be reviewed. Refresh the payment list.");
+      }
+
+      const updated = await client.query(
+        `UPDATE registrations
+         SET payment_status=$1,
+             payment_verified_at=CASE WHEN $1='VERIFIED' THEN NOW() ELSE NULL END,
+             payment_note=$2
+         WHERE id=$3 AND payment_status='SUBMITTED'
+         RETURNING *`,
+        [paymentStatus, note, registrationId]
+      );
+      if (!updated.rowCount) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 409, "This payment was already reviewed. Refresh the payment list.");
+      }
+      await client.query(
+        `INSERT INTO payment_events(registration_id,tournament_id,actor_type,actor_id,event_type,previous_status,new_status,utr,amount,note)
+         VALUES($1,$2,'ADMIN',$3,'PAYMENT_REVIEW',$4,$5,$6,$7,$8)`,
+        [row.id, row.tournament_id, req.auth.id, row.payment_status, paymentStatus, row.utr, row.entry_fee, note]
+      );
+      await client.query(
+        `INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id,details)
+         VALUES('ADMIN',$1,'PAYMENT_REVIEW','REGISTRATION',$2,$3::jsonb)`,
+        [req.auth.id, row.id, JSON.stringify({paymentStatus, note, tournamentId: row.tournament_id, amount: row.entry_fee})]
+      );
+      await client.query("COMMIT");
+      transactionOpen = false;
+      return res.json({ok:true, registration:updated.rows[0]});
+    } catch (e) {
+      if (transactionOpen) { try { await client.query("ROLLBACK"); } catch {} }
+      console.error("Payment review error:", e.message);
+      return sendError(res, 500, "Could not update payment status. No payment changes were saved.");
+    } finally {
+      client.release();
     }
-    const r = await query(
-      `UPDATE registrations r
-       SET payment_status=$1,
-           payment_verified_at=CASE WHEN $1='VERIFIED' THEN NOW() ELSE NULL END,
-           payment_note=$2
-       FROM tournaments t
-       WHERE r.id=$3 AND t.id=r.tournament_id AND t.entry_type='PAID'
-       RETURNING r.*`,
-      [paymentStatus, note, req.params.id]
-    );
-    if (!r.rowCount) return sendError(res, 404, "Paid registration not found.");
-    await audit("ADMIN", req.auth.id, "PAYMENT_REVIEW", "REGISTRATION", r.rows[0].id, {paymentStatus, note});
-    return res.json({ok:true, registration:r.rows[0]});
   }
 );
 
