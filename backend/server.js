@@ -2169,8 +2169,9 @@ app.get(
   auth("ADMIN"),
   async (_req, res) => {
     const r = await query(
-      `SELECT DISTINCT ON (m.tournament_id) m.*, t.title
+      `SELECT DISTINCT ON (m.tournament_id) m.*, t.title, t.status AS tournament_status
        FROM matches m JOIN tournaments t ON t.id=m.tournament_id
+       WHERE UPPER(COALESCE(t.status, '')) NOT IN ('COMPLETED', 'RESULTS FINAL', 'CANCELLED', 'SUSPENDED', 'DELETED')
        ORDER BY m.tournament_id, m.match_number ASC, m.id ASC`
     );
     res.json({ ok: true, matches: r.rows });
