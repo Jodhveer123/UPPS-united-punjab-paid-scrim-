@@ -213,6 +213,28 @@ function auth(requiredType) {
   };
 }
 
+
+/*
+  Staff-management actions are OWNER-only. Resolve the role from the database
+  instead of trusting the role embedded in an older login token.
+*/
+function requireRole(...allowedRoles) {
+  return async (req, res, next) => {
+    try {
+      const current = await query("SELECT role FROM admins WHERE id=$1", [req.auth?.id]);
+      if (!current.rowCount) return sendError(res, 401, "Administrator account is no longer available.");
+      req.auth.role = current.rows[0].role;
+      if (!allowedRoles.includes(req.auth.role)) {
+        return sendError(res, 403, "Your staff role does not have permission to manage staff accounts.");
+      }
+      return next();
+    } catch (e) {
+      console.error("Administrator role check error:", e.message);
+      return sendError(res, 500, "Could not verify administrator permissions.");
+    }
+  };
+}
+
 async function query(text, params = []) {
   return pool.query(text, params);
 }
@@ -2687,7 +2709,7 @@ app.patch("/api/admin/reviews/:id/status", auth("ADMIN"), async (req,res) => {
   }
 });
 
-app.get("/api/admin/staff", auth("ADMIN"), async (_req,res) => {
+app.get("/api/admin/staff", auth("ADMIN"), requireRole("OWNER"), async (_req,res) => {
   try {
     const r=await query(`
       SELECT id,username,role,created_at
@@ -2701,7 +2723,7 @@ app.get("/api/admin/staff", auth("ADMIN"), async (_req,res) => {
   }
 });
 
-app.post("/api/admin/staff", auth("ADMIN"), async (req,res) => {
+app.post("/api/admin/staff", auth("ADMIN"), requireRole("OWNER"), async (req,res) => {
   const {username,password,role}=req.body||{};
   const allowed=["OWNER","TOURNAMENT_MANAGER","RESULTS_MANAGER","MODERATOR","SUPPORT"];
   if(!username || !password || password.length<8) return sendError(res,400,"Username and a password of at least 8 characters are required.");
@@ -2723,7 +2745,7 @@ app.post("/api/admin/staff", auth("ADMIN"), async (req,res) => {
   }
 });
 
-app.patch("/api/admin/staff/:id/role", auth("ADMIN"), async (req,res) => {
+app.patch("/api/admin/staff/:id/role", auth("ADMIN"), requireRole("OWNER"), async (req,res) => {
   const allowed=["OWNER","TOURNAMENT_MANAGER","RESULTS_MANAGER","MODERATOR","SUPPORT"];
   const role=req.body && req.body.role;
   if(!allowed.includes(role)) return sendError(res,400,"Invalid staff role.");
@@ -2731,6 +2753,12 @@ app.patch("/api/admin/staff/:id/role", auth("ADMIN"), async (req,res) => {
     return sendError(res,400,"You cannot remove your own OWNER role from this session.");
   }
   try {
+    const target=await query("SELECT id,role FROM admins WHERE id=$1",[req.params.id]);
+    if(!target.rowCount) return sendError(res,404,"Staff account not found.");
+    if(target.rows[0].role==="OWNER" && role!=="OWNER") {
+      const owners=await query("SELECT COUNT(*)::int AS n FROM admins WHERE role='OWNER'");
+      if(Number(owners.rows[0].n)<=1) return sendError(res,409,"The last OWNER account cannot be demoted. Promote another trusted account first.");
+    }
     const r=await query(`UPDATE admins SET role=$1 WHERE id=$2 RETURNING id,username,role,created_at`,[role,req.params.id]);
     if(!r.rowCount) return sendError(res,404,"Staff account not found.");
     await audit("ADMIN",req.auth.id,"STAFF_ROLE","ADMIN",r.rows[0].id,{role});
