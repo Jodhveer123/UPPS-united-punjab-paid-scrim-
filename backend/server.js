@@ -248,6 +248,42 @@ async function ensurePaymentColumns() {
       await query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ`);
       await query(`ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_note TEXT NOT NULL DEFAULT ''`);
       await query(`UPDATE registrations r SET payment_status='NOT_REQUIRED' FROM tournaments t WHERE t.id=r.tournament_id AND t.entry_type='FREE' AND r.payment_status='NOT_SUBMITTED'`);
+
+      // Permanently reserve each UTR to a single registration, case-insensitively.
+      await query(`CREATE TABLE IF NOT EXISTS payment_reference_claims (
+        normalized_utr TEXT PRIMARY KEY,
+        registration_id BIGINT NOT NULL,
+        original_utr TEXT NOT NULL,
+        claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_payment_reference_claims_registration
+        ON payment_reference_claims(registration_id)`);
+      await query(`INSERT INTO payment_reference_claims(normalized_utr, registration_id, original_utr, claimed_at)
+        SELECT DISTINCT ON (UPPER(BTRIM(utr)))
+          UPPER(BTRIM(utr)), id, utr, COALESCE(payment_submitted_at, created_at)
+        FROM registrations
+        WHERE utr IS NOT NULL AND BTRIM(utr) <> ''
+        ORDER BY UPPER(BTRIM(utr)), payment_submitted_at NULLS LAST, id
+        ON CONFLICT (normalized_utr) DO NOTHING`);
+
+      await query(`CREATE TABLE IF NOT EXISTS payment_events (
+        id BIGSERIAL PRIMARY KEY,
+        registration_id BIGINT NOT NULL,
+        tournament_id BIGINT,
+        actor_type TEXT NOT NULL CHECK (actor_type IN ('PLAYER','ADMIN','SYSTEM')),
+        actor_id BIGINT,
+        event_type TEXT NOT NULL,
+        previous_status TEXT,
+        new_status TEXT NOT NULL,
+        utr TEXT,
+        amount NUMERIC(12,2),
+        note TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_payment_events_registration_created
+        ON payment_events(registration_id, created_at DESC)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_payment_events_created
+        ON payment_events(created_at DESC)`);
     })().catch(error => {
       paymentColumnsReady = null;
       throw error;
@@ -1293,35 +1329,60 @@ app.post(
     }
     const utr = String(req.body?.utr || "").trim();
     const freeFireUid = String(req.body?.freeFireUid || "").trim();
-    if (!/^[A-Za-z0-9-]{6,40}$/.test(utr)) {
-      return sendError(res, 400, "Enter a valid UTR / transaction reference (6–40 letters or numbers).");
-    }
-    if (!/^[0-9]{5,20}$/.test(freeFireUid)) {
-      return sendError(res, 400, "Enter your 5–20 digit Free Fire UID.");
-    }
+    if (!/^[A-Za-z0-9-]{6,40}$/.test(utr)) return sendError(res, 400, "Enter a valid UTR / transaction reference (6–40 letters or numbers).");
+    if (!/^[0-9]{5,20}$/.test(freeFireUid)) return sendError(res, 400, "Enter your 5–20 digit Free Fire UID.");
+
+    const client = await pool.connect();
+    let transactionOpen = false;
     try {
-      const r = await query(
-        `SELECT r.id, r.status, r.payment_status, t.id AS tournament_id,
-                t.title, t.entry_type, p.free_fire_uid
+      await client.query("BEGIN");
+      transactionOpen = true;
+      const r = await client.query(
+        `SELECT r.id, r.public_id, r.status, r.payment_status, t.id AS tournament_id,
+                t.entry_type, t.entry_fee, p.free_fire_uid
          FROM registrations r
          JOIN tournaments t ON t.id=r.tournament_id
          JOIN players p ON p.id=r.player_id
          WHERE r.public_id=$1 AND r.player_id=$2
-         LIMIT 1`,
+         FOR UPDATE OF r`,
         [req.params.publicId, req.auth.id]
       );
-      if (!r.rowCount) return sendError(res, 404, "Registration not found for your account.");
+      if (!r.rowCount) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 404, "Registration not found for your account.");
+      }
       const reg = r.rows[0];
-      if (reg.entry_type !== "PAID") return sendError(res, 400, "This is a free tournament; payment is not required.");
-      if (!reg.free_fire_uid || reg.free_fire_uid !== freeFireUid) return sendError(res, 400, "The Free Fire UID does not match your UPPS profile.");
-      if (["REJECTED","CANCELLED"].includes(reg.status)) return sendError(res, 400, "This registration is not active.");
-      if (reg.payment_status === "VERIFIED") return sendError(res, 409, "Payment is already verified. Contact the organizer if you think this is incorrect.");
-      const duplicate = await query(
-        `SELECT id FROM registrations WHERE UPPER(utr)=UPPER($1) AND id<>$2 LIMIT 1`,
-        [utr, reg.id]
+      if (reg.entry_type !== "PAID") {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 400, "This is a free tournament; payment is not required.");
+      }
+      if (!reg.free_fire_uid || reg.free_fire_uid !== freeFireUid) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 400, "The Free Fire UID does not match your UPPS profile.");
+      }
+      if (["REJECTED","CANCELLED"].includes(reg.status)) {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 400, "This registration is not active.");
+      }
+      if (reg.payment_status === "VERIFIED") {
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 409, "Payment is already verified. Contact the organizer if you think this is incorrect.");
+      }
+
+      const claim = await client.query(
+        `INSERT INTO payment_reference_claims(normalized_utr, registration_id, original_utr)
+         VALUES($1,$2,$3) ON CONFLICT (normalized_utr) DO NOTHING RETURNING registration_id`,
+        [utr.toUpperCase(), reg.id, utr]
       );
-      if (duplicate.rowCount) return sendError(res, 409, "This transaction reference has already been used. Check the UTR and contact the organizer if you believe this is an error.");
-      const saved = await query(
+      if (!claim.rowCount) {
+        const owner = await client.query("SELECT registration_id FROM payment_reference_claims WHERE normalized_utr=$1", [utr.toUpperCase()]);
+        if (!owner.rowCount || String(owner.rows[0].registration_id) !== String(reg.id)) {
+          await client.query("ROLLBACK"); transactionOpen = false;
+          return sendError(res, 409, "This transaction reference has already been used. Check the UTR and contact the organizer if you believe this is an error.");
+        }
+      }
+
+      const saved = await client.query(
         `UPDATE registrations
          SET utr=$1, payment_status='SUBMITTED', payment_submitted_at=NOW(),
              payment_verified_at=NULL, payment_note=''
@@ -1329,16 +1390,29 @@ app.post(
          RETURNING public_id, payment_status, payment_submitted_at`,
         [utr, reg.id]
       );
-      await audit("PLAYER", req.auth.id, "PAYMENT_REFERENCE_SUBMITTED", "REGISTRATION", reg.id, { tournamentId: reg.tournament_id });
+      await client.query(
+        `INSERT INTO payment_events(registration_id,tournament_id,actor_type,actor_id,event_type,previous_status,new_status,utr,amount,note)
+         VALUES($1,$2,'PLAYER',$3,'REFERENCE_SUBMITTED',$4,'SUBMITTED',$5,$6,'')`,
+        [reg.id, reg.tournament_id, req.auth.id, reg.payment_status, utr, reg.entry_fee]
+      );
+      await client.query(
+        `INSERT INTO audit_logs(actor_type,actor_id,action,entity_type,entity_id,details)
+         VALUES('PLAYER',$1,'PAYMENT_REFERENCE_SUBMITTED','REGISTRATION',$2,$3::jsonb)`,
+        [req.auth.id, reg.id, JSON.stringify({tournamentId: reg.tournament_id, amount: reg.entry_fee})]
+      );
+      await client.query("COMMIT");
+      transactionOpen = false;
       return res.json({ok:true, payment:saved.rows[0], message:"Payment reference submitted. Your payment is awaiting organizer verification."});
     } catch (e) {
+      if (transactionOpen) { try { await client.query("ROLLBACK"); } catch {} }
       if (e.code === "23505") return sendError(res, 409, "This transaction reference has already been submitted.");
-      console.error(e);
+      console.error("Payment reference submission error:", e.message);
       return sendError(res, 500, "Could not submit payment reference.");
+    } finally {
+      client.release();
     }
   }
 );
-
 
 /* =========================================================
    PLAYER ROOM CREDENTIALS
