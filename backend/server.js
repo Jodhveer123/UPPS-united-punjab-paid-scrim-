@@ -308,6 +308,20 @@ async function initDb() {
 
   await query(schema);
 
+  // Ensure every tournament has one internal room/result record.
+  const tournamentsWithoutRoom = await query(
+    `SELECT t.id FROM tournaments t
+     WHERE NOT EXISTS (SELECT 1 FROM matches m WHERE m.tournament_id=t.id)`
+  );
+  for (const tournament of tournamentsWithoutRoom.rows) {
+    await query(
+      `INSERT INTO matches(public_id,tournament_id,match_number)
+       VALUES($1,$2,1)
+       ON CONFLICT(tournament_id,match_number) DO NOTHING`,
+      [id("MAT"), tournament.id]
+    );
+  }
+
   const adminUsername =
     process.env.ADMIN_USERNAME;
 
@@ -464,16 +478,8 @@ app.get(
       delete tournament.room_password;
 
       const matches = await query(
-        `
-        SELECT
-          public_id,
-          match_number,
-          status,
-          start_at
-        FROM matches
-        WHERE tournament_id=$1
-        ORDER BY match_number
-        `,
+        `SELECT public_id, status, start_at FROM matches
+         WHERE tournament_id=$1 ORDER BY match_number LIMIT 1`,
         [tournament.id]
       );
 
@@ -1363,30 +1369,14 @@ app.get(
     }
 
     const matches = await query(
-      `SELECT
-         m.public_id, m.match_number, m.status, m.start_at,
-         m.room_release_at,
-         CASE
-           WHEN m.room_enabled=TRUE
-            AND m.room_id IS NOT NULL
-            AND m.room_password IS NOT NULL
-            AND (m.room_release_at IS NULL OR m.room_release_at <= NOW())
-           THEN m.room_id ELSE NULL
-         END AS room_id,
-         CASE
-           WHEN m.room_enabled=TRUE
-            AND m.room_id IS NOT NULL
-            AND m.room_password IS NOT NULL
-            AND (m.room_release_at IS NULL OR m.room_release_at <= NOW())
-           THEN m.room_password ELSE NULL
-         END AS room_password,
-         (m.room_enabled=TRUE
-          AND m.room_id IS NOT NULL
-          AND m.room_password IS NOT NULL
-          AND (m.room_release_at IS NULL OR m.room_release_at <= NOW())) AS released
-       FROM matches m
-       WHERE m.tournament_id=$1
-       ORDER BY m.match_number`,
+      `SELECT m.public_id, m.status, m.start_at, m.room_release_at,
+         CASE WHEN m.room_enabled=TRUE AND m.room_id IS NOT NULL AND m.room_password IS NOT NULL
+                   AND (m.room_release_at IS NULL OR m.room_release_at <= NOW()) THEN m.room_id ELSE NULL END AS room_id,
+         CASE WHEN m.room_enabled=TRUE AND m.room_id IS NOT NULL AND m.room_password IS NOT NULL
+                   AND (m.room_release_at IS NULL OR m.room_release_at <= NOW()) THEN m.room_password ELSE NULL END AS room_password,
+         (m.room_enabled=TRUE AND m.room_id IS NOT NULL AND m.room_password IS NOT NULL
+                   AND (m.room_release_at IS NULL OR m.room_release_at <= NOW())) AS released
+       FROM matches m WHERE m.tournament_id=$1 ORDER BY m.match_number LIMIT 1`,
       [eligible.rows[0].id]
     );
 
@@ -1407,7 +1397,6 @@ app.get(
       `
       SELECT
         t.title,
-        m.match_number,
         res.placement,
         res.kills,
         res.points
@@ -1790,7 +1779,7 @@ app.post(
         b.entryType,
         Number(b.entryFee || 0),
         Number(b.capacity),
-        Number(b.matchesCount || 1),
+        1,
         b.scoringType || "CUSTOM",
         b.status || "DRAFT",
         b.startAt || null,
@@ -1798,6 +1787,13 @@ app.post(
         b.rules || "",
         b.prizeSummary || ""
       ]
+    );
+
+    await query(
+      `INSERT INTO matches(public_id,tournament_id,match_number,start_at)
+       VALUES($1,$2,1,$3)
+       ON CONFLICT(tournament_id,match_number) DO NOTHING`,
+      [id("MAT"), r.rows[0].id, r.rows[0].start_at || null]
     );
 
     await audit(
@@ -1828,7 +1824,7 @@ app.patch(
     if (!["FREE","PAID"].includes(b.entryType)) return sendError(res,400,"Invalid entry type.");
     const capacity = Number(b.capacity);
     const fee = Number(b.entryFee || 0);
-    const matchesCount = Number(b.matchesCount || 1);
+    const matchesCount = 1;
     if (!Number.isInteger(capacity) || capacity < 1) return sendError(res,400,"Capacity must be at least 1.");
     if (!Number.isInteger(matchesCount) || matchesCount < 1) return sendError(res,400,"Matches must be at least 1.");
     if (!Number.isFinite(fee) || fee < 0 || (b.entryType === "FREE" && fee !== 0)) return sendError(res,400,"Invalid entry fee.");
@@ -2092,89 +2088,34 @@ app.post(
   "/api/admin/tournaments/:id/matches",
   auth("ADMIN"),
   async (req, res) => {
-    const {
-      matchNumber,
-      roomId,
-      roomPassword,
-      roomReleaseAt,
-      roomEnabled,
-      startAt
-    } = req.body || {};
-
-    if (!Number(matchNumber)) {
-      return sendError(
-        res,
-        400,
-        "matchNumber is required."
-      );
-    }
-
+    const { roomId, roomPassword, roomReleaseAt, roomEnabled, startAt } = req.body || {};
     const normalizedRoomId = String(roomId || "").trim();
     const normalizedRoomPassword = String(roomPassword || "").trim();
     const publishRoom = roomEnabled === true || roomEnabled === "true" || roomEnabled === "on";
-    if ((normalizedRoomId && !normalizedRoomPassword) || (!normalizedRoomId && normalizedRoomPassword)) {
-      return sendError(res, 400, "Enter both the room ID and room password, or leave both blank.");
-    }
-    if (publishRoom && (!normalizedRoomId || !normalizedRoomPassword)) {
-      return sendError(res, 400, "Add both room ID and password before publishing credentials.");
-    }
-
+    if (normalizedRoomId.length > 100 || normalizedRoomPassword.length > 100) return sendError(res, 400, "Room ID and password must be 100 characters or fewer.");
+    if ((normalizedRoomId && !normalizedRoomPassword) || (!normalizedRoomId && normalizedRoomPassword)) return sendError(res, 400, "Enter both the room ID and room password, or leave both blank.");
+    if (publishRoom && (!normalizedRoomId || !normalizedRoomPassword)) return sendError(res, 400, "Add both room ID and password before publishing credentials.");
+    if (roomReleaseAt && Number.isNaN(Date.parse(roomReleaseAt))) return sendError(res, 400, "Invalid room release date and time.");
+    if (startAt && Number.isNaN(Date.parse(startAt))) return sendError(res, 400, "Invalid tournament start date and time.");
     try {
       const r = await query(
-        `
-        INSERT INTO matches(
-          public_id,
-          tournament_id,
-          match_number,
-          room_id,
-          room_password,
-          room_release_at,
-          room_enabled,
-          start_at
-        )
-        VALUES(
-          $1,$2,$3,$4,$5,$6,$7,$8
-        )
-        RETURNING *
-        `,
-        [
-          id("MAT"),
-          req.params.id,
-          Number(matchNumber),
-          normalizedRoomId || null,
-          normalizedRoomPassword || null,
-          roomReleaseAt || null,
-          publishRoom,
-          startAt || null
-        ]
+        `INSERT INTO matches(public_id,tournament_id,match_number,room_id,room_password,room_release_at,room_enabled,start_at)
+         SELECT $1,t.id,1,$3,$4,$5,$6,$7 FROM tournaments t WHERE t.id=$2
+         ON CONFLICT(tournament_id,match_number)
+         DO UPDATE SET room_id=EXCLUDED.room_id, room_password=EXCLUDED.room_password,
+                       room_release_at=EXCLUDED.room_release_at, room_enabled=EXCLUDED.room_enabled,
+                       start_at=COALESCE(EXCLUDED.start_at,matches.start_at)
+         RETURNING *`,
+        [id("MAT"), req.params.id, normalizedRoomId || null, normalizedRoomPassword || null, roomReleaseAt || null, publishRoom, startAt || null]
       );
-
-      await audit(
-        "ADMIN",
-        req.auth.id,
-        "CREATE",
-        "MATCH",
-        r.rows[0].id
-      );
-
-      res.status(201).json({
-        ok: true,
-        match: r.rows[0]
+      if (!r.rowCount) return sendError(res, 404, "Tournament not found.");
+      await audit("ADMIN", req.auth.id, "UPSERT_TOURNAMENT_ROOM", "TOURNAMENT", req.params.id, {
+        roomEnabled: publishRoom, hasRoomId: Boolean(normalizedRoomId), releaseAt: roomReleaseAt || null
       });
+      return res.json({ ok: true, match: r.rows[0] });
     } catch (e) {
-      if (e.code === "23505") {
-        return sendError(
-          res,
-          409,
-          "That match number already exists."
-        );
-      }
-
-      sendError(
-        res,
-        500,
-        "Could not create match."
-      );
+      console.error("Tournament room update error:", e.message);
+      return sendError(res, 500, "Could not save tournament room settings.");
     }
   }
 );
@@ -2222,24 +2163,11 @@ app.get(
   auth("ADMIN"),
   async (_req, res) => {
     const r = await query(
-      `
-      SELECT
-        m.*,
-        t.title
-      FROM matches m
-      JOIN tournaments t
-        ON t.id=m.tournament_id
-      ORDER BY
-        m.start_at NULLS LAST,
-        m.tournament_id,
-        m.match_number
-      `
+      `SELECT DISTINCT ON (m.tournament_id) m.*, t.title
+       FROM matches m JOIN tournaments t ON t.id=m.tournament_id
+       ORDER BY m.tournament_id, m.match_number ASC, m.id ASC`
     );
-
-    res.json({
-      ok: true,
-      matches: r.rows
-    });
+    res.json({ ok: true, matches: r.rows });
   }
 );
 
@@ -2383,7 +2311,7 @@ app.get(
           SUM(res.points),
           0
         )::numeric AS points,
-        COUNT(res.id)::int AS matches
+        COUNT(res.id)::int AS players
       FROM tournaments t
       JOIN matches m
         ON m.tournament_id=t.id
