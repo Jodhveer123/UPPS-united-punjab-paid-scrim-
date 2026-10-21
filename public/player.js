@@ -27,7 +27,7 @@ async function load() {
       throw new Error(registrationsData.error || "Could not load your registrations. Please refresh in a moment.");
     }
     if (!resultsResponse.ok || !resultsData.ok) {
-      throw new Error(resultsData.error || "Could not load match results. Please refresh in a moment.");
+      throw new Error(resultsData.error || "Could not load tournament results. Please refresh in a moment.");
     }
 
     const registrations = Array.isArray(registrationsData.registrations) ? registrationsData.registrations : [];
@@ -153,7 +153,7 @@ function renderRegistration(x, profileUid) {
         <p>${esc(info.message)}</p>
         ${status === "VERIFIED"
           ? `<div class="success-note">You are eligible to participate. Follow the tournament instructions when they are published.</div>
-             <div class="room-access" data-room-tournament="${esc(x.tournament_public_id)}"><p class="muted">Checking match room access…</p></div>`
+             <div class="room-access" data-room-tournament="${esc(x.tournament_public_id)}"><p class="muted">Checking tournament room access…</p></div>`
           : ""}
       </div>
     </div>
