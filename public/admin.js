@@ -94,11 +94,11 @@ function renderPayments(){
     return (rank[a.payment_status||"NOT_SUBMITTED"]??4)-(rank[b.payment_status||"NOT_SUBMITTED"]??4)||new Date(b.payment_submitted_at||b.created_at||0)-new Date(a.payment_submitted_at||a.created_at||0);
   });
   $("#paymentSearchHint").textContent=`${rows.length} shown · ${countStatus("SUBMITTED")} awaiting review · ${countStatus("VERIFIED")} verified`;
-  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>Registration: ${esc(r.public_id)}</small></td><td><b>₹${Number(r.entry_fee||0).toFixed(2)}</b></td><td><b>${esc(r.utr||"Not submitted")}</b>${r.payment_submitted_at?`<small>Submitted: ${esc(fmt(r.payment_submitted_at))}</small>`:""}${r.utr?`<button class="btn secondary payment-copy-utr" data-utr="${esc(r.utr)}" type="button">Copy UTR</button>`:""}</td><td><b>${esc((r.payment_status||"NOT_SUBMITTED").replaceAll("_"," "))}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td><div class="payment-action-stack">${r.payment_status==="SUBMITTED"?`<button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button>`:""}<button class="btn secondary payment-history" data-id="${r.id}" type="button">History</button></div></td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No matching payment records.":filter==="ACTION"?"No payments are awaiting review.":"No paid registrations match this filter."}</td></tr>`;
+  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>Registration: ${esc(r.public_id)}</small></td><td><b>₹${Number(r.entry_fee||0).toFixed(2)}</b></td><td><b>${esc(r.utr||"Not submitted")}</b>${r.payment_submitted_at?`<small>Submitted: ${esc(fmt(r.payment_submitted_at))}</small>`:""}${r.utr?`<button class="btn secondary payment-copy-utr" data-utr="${esc(r.utr)}" type="button">Copy UID</button>`:""}</td><td><b>${esc((r.payment_status||"NOT_SUBMITTED").replaceAll("_"," "))}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td><div class="payment-action-stack">${r.payment_status==="SUBMITTED"?`<button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button>`:""}<button class="btn secondary payment-history" data-id="${r.id}" type="button">History</button></div></td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No matching payment records.":filter==="ACTION"?"No payments are awaiting review.":"No paid registrations match this filter."}</td></tr>`;
 }
 function renderRegistrations(){
   const filter=$("#registrationFilter").value; const rows=state.registrations.filter(r=>filter==="ALL"||r.status===filter);
-  $("#registrationsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.public_id)}</b><small>${esc(r.team_name||"")}</small></td><td><b>${esc(r.display_name||r.username)}</b><small>UID: ${esc(r.free_fire_uid||"—")}</small></td><td>${esc(r.title)}<small>${r.entry_type==="PAID"?"₹"+Number(r.entry_fee||0).toFixed(2):"FREE"}</small></td><td>${esc(r.mode||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td>${r.entry_type==="PAID"?`<b>${esc(r.payment_status||"NOT_SUBMITTED")}</b><small>UTR: ${esc(r.utr||"Not submitted")}</small>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}`: "<span class='muted'>Not required</span>"}</td><td><select class="registration-status" data-id="${r.id}"><option value="PENDING" ${r.status==="PENDING"?"selected":""}>PENDING</option><option value="VERIFIED" ${r.status==="VERIFIED"?"selected":""}>VERIFIED</option><option value="REJECTED" ${r.status==="REJECTED"?"selected":""}>REJECTED</option><option value="WAITLISTED" ${r.status==="WAITLISTED"?"selected":""}>WAITLISTED</option><option value="CANCELLED" ${r.status==="CANCELLED"?"selected":""}>CANCELLED</option></select>${r.entry_type==="PAID"&&r.payment_status==="SUBMITTED"?`<div class="button-row"><button class="btn secondary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify payment</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject payment</button></div>`:""}</td></tr>`).join("")||`<tr><td colspan="8" class="empty">No registrations.</td></tr>`;
+  $("#registrationsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.public_id)}</b><small>${esc(r.team_name||"")}</small></td><td><b>${esc(r.display_name||r.username)}</b><small>UID: ${esc(r.free_fire_uid||"—")}</small></td><td>${esc(r.title)}<small>${r.entry_type==="PAID"?"₹"+Number(r.entry_fee||0).toFixed(2):"FREE"}</small></td><td>${esc(r.mode||"—")}</td><td>${pill(r.status)}</td><td>${fmt(r.created_at)}</td><td>${r.entry_type==="PAID"?`<b>${esc(r.payment_status||"NOT_SUBMITTED")}</b><small>UID: ${esc(r.utr||"Not submitted")}</small>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}`: "<span class='muted'>Not required</span>"}</td><td><select class="registration-status" data-id="${r.id}"><option value="PENDING" ${r.status==="PENDING"?"selected":""}>PENDING</option><option value="VERIFIED" ${r.status==="VERIFIED"?"selected":""}>VERIFIED</option><option value="REJECTED" ${r.status==="REJECTED"?"selected":""}>REJECTED</option><option value="WAITLISTED" ${r.status==="WAITLISTED"?"selected":""}>WAITLISTED</option><option value="CANCELLED" ${r.status==="CANCELLED"?"selected":""}>CANCELLED</option></select>${r.entry_type==="PAID"&&r.payment_status==="SUBMITTED"?`<div class="button-row"><button class="btn secondary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify payment</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject payment</button></div>`:""}</td></tr>`).join("")||`<tr><td colspan="8" class="empty">No registrations.</td></tr>`;
 }
 function localDateTimeValue(v){
   if(!v) return "";
@@ -152,8 +152,8 @@ $("#paymentsTable").addEventListener("click",async e=>{
   try{
     if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(copy.dataset.utr);
     else {const ta=document.createElement("textarea");ta.value=copy.dataset.utr;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw new Error("Clipboard unavailable");}
-    msg("UTR copied.");
-  }catch{msg("Could not copy automatically. Select the UTR text and copy it manually.",true);}
+    msg("UID copied.");
+  }catch{msg("Could not copy automatically. Select the UID text and copy it manually.",true);}
 });
 $("#reviewFilter").addEventListener("change",renderReviews);
 $("#refreshCancelled").addEventListener("click",async()=>{await loadCancelled();renderCancelled();});
@@ -226,9 +226,9 @@ $("#paymentsTable").addEventListener("click",async e=>{
   const status=button.dataset.status;
   const note=prompt(status==="VERIFIED"?"Optional verification note:":"Reason for rejecting this payment (required):","")||"";
   if(status==="REJECTED"&&!note.trim()){msg("Enter a reason when rejecting a payment.",true);return;}
-  if(!confirm(status==="VERIFIED"?"Confirm you checked the received payment and UTR in your payment account?":"Reject this payment reference?"))return;
+  if(!confirm(status==="VERIFIED"?"Confirm you checked the received payment and UID in your payment account?":"Reject this UID?"))return;
   button.disabled=true;
-  try{await api(`/api/admin/registrations/${button.dataset.id}/payment`,{method:"PATCH",body:JSON.stringify({paymentStatus:status,note})});await loadRegistrations();renderRegistrations();renderPayments();renderDashboard();msg(status==="VERIFIED"?"Payment verified. Approve the registration separately.":"Payment rejected. The player can submit a corrected UTR.");}
+  try{await api(`/api/admin/registrations/${button.dataset.id}/payment`,{method:"PATCH",body:JSON.stringify({paymentStatus:status,note})});await loadRegistrations();renderRegistrations();renderPayments();renderDashboard();msg(status==="VERIFIED"?"Payment verified. Approve the registration separately.":"Payment rejected. The player can submit a corrected UID.");}
   catch(err){msg(err.message,true);}finally{button.disabled=false;}
 });
 $("#paymentsTable").addEventListener("click",async e=>{
@@ -241,7 +241,7 @@ $("#paymentsTable").addEventListener("click",async e=>{
       const amount=item.amount==null?"—":"₹"+Number(item.amount).toFixed(2);
       const transition=(item.previous_status||"—")+" → "+item.new_status;
       const note=item.note?("\nNote: "+item.note):"";
-      return fmt(item.created_at)+" | "+item.event_type+" | "+transition+" | "+amount+" | UTR: "+(item.utr||"—")+note;
+      return fmt(item.created_at)+" | "+item.event_type+" | "+transition+" | "+amount+" | UID: "+(item.utr||"—")+note;
     }).join("\n\n"):"No payment history has been recorded for this registration yet.";
     alert("UPPS Payment History\n\n"+message);
   }catch(err){msg(err.message,true);}finally{button.disabled=false;}
@@ -252,7 +252,7 @@ $("#registrationsTable").addEventListener("click",async e=>{
   const status=button.dataset.status;
   const note=prompt(status==="VERIFIED"?"Optional payment verification note:":"Reason for rejecting this payment (required):","")||"";
   if(status==="REJECTED"&&!note.trim()){msg("Enter a reason when rejecting a payment.",true);return;}
-  if(!confirm(status==="VERIFIED"?"Confirm you checked the payment against your payment account and the UTR?":"Reject this payment reference?"))return;
+  if(!confirm(status==="VERIFIED"?"Confirm you checked the payment against your payment account and the UID?":"Reject this UID?"))return;
   button.disabled=true;
   try{
     await api(`/api/admin/registrations/${button.dataset.id}/payment`,{method:"PATCH",body:JSON.stringify({paymentStatus:status,note})});
