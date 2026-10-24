@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UPPS · Payment Simulation Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#090a12;--panel:#121421;--panel2:#171a2b;--line:#292d43;--text:#f5f6ff;--muted:#a4a8bf;--purple:#9b7bff;--lime:#c8ff45;--red:#ff687c;--green:#6be5ad}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 12% 0%,#28204c 0,transparent 36%),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:11px;padding:11px 15px;font-weight:750;color:#0b0b11;background:var(--lime)}button.secondary{background:#252940;color:var(--text);border:1px solid var(--line)}button.danger{background:#421f2c;color:#ffb9c3;border:1px solid #6a2d40}button:disabled{opacity:.45;cursor:not-allowed}
+.wrap{max-width:1180px;margin:auto;padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.brand{font-weight:950;letter-spacing:.12em}.brand span{color:var(--lime)}.eyebrow{color:var(--lime);font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.warning{margin:20px 0;padding:13px 16px;border:1px solid #8b6c26;background:#332914;border-radius:13px;color:#ffe4a1}.warning strong{display:block;color:#fff0c7}.hero{padding:22px 0 12px}.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.08;margin:8px 0}.hero p,.muted{color:var(--muted)}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.tabs button.active{background:var(--purple);color:white}.layout{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.4fr);gap:16px}.panel{background:linear-gradient(160deg,#17192a,#10121d);border:1px solid var(--line);border-radius:18px;padding:20px;min-width:0}.panel h2{font-size:19px;margin:0 0 5px}.panel p{margin-top:4px}.field{display:grid;gap:6px;margin:14px 0}.field label{font-size:12px;font-weight:800;color:#d8daea}.field input,.field select,.field textarea{width:100%;min-width:0;background:#0b0d17;color:var(--text);border:1px solid #343951;border-radius:10px;padding:11px 12px;outline:none}.field input:focus,.field select:focus{border-color:var(--purple)}.check{display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:13px;margin:15px 0}.check input{margin-top:5px}.actions{display:flex;gap:8px;flex-wrap:wrap}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.stat{background:#0b0d17;border:1px solid var(--line);border-radius:12px;padding:13px}.stat span{display:block;color:var(--muted);font-size:11px}.stat b{font-size:22px}.search{width:100%;padding:10px 12px;background:#0b0d17;color:white;border:1px solid var(--line);border-radius:10px;margin:10px 0 14px}.record{padding:15px 0;border-top:1px solid var(--line)}.record:first-child{border-top:0}.record-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.record h3{margin:0;font-size:15px;overflow-wrap:anywhere}.meta{font-size:12px;color:var(--muted);margin:5px 0;overflow-wrap:anywhere}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;letter-spacing:.04em}.pill.pending{color:#ffe4a1;border-color:#7c6128}.pill.approved{color:var(--green);border-color:#2b7355}.pill.rejected{color:#ffb9c3;border-color:#7d3445}.pill.test{color:var(--purple);border-color:#6250a5}.match{padding:9px 11px;border-radius:10px;margin:10px 0;font-size:12px}.match.good{background:#102d25;color:#9cf2c8}.match.bad{background:#351720;color:#ffb9c3}.match.warn{background:#332914;color:#ffe4a1}.empty{color:var(--muted);padding:22px 0;text-align:center}.small{font-size:11px;color:var(--muted)}.foot{padding:26px 0;color:var(--muted);font-size:12px;text-align:center}.hidden{display:none!important}@media(max-width:800px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:14px}.panel{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div class="brand">UPP<span>S</span> <span style="color:var(--muted);font-weight:600;letter-spacing:0">/ PAYMENT LAB</span></div><span class="pill test">TEST MODE · NO REAL MONEY</span></header>
+  <div class="warning"><strong>TEST ENVIRONMENT — SIMULATED DATA ONLY</strong>This page is isolated from UPPS player registrations, payment APIs, and the production database. Approvals here do not verify real payments or unlock tournament access.</div>
+  <section class="hero"><div class="eyebrow">Manual review workflow</div><h1>Payment verification lab</h1><p>Exercise the player submission and admin review experience using fictional transactions stored only in this browser.</p></section>
+  <nav class="tabs" aria-label="Simulation views"><button class="active" data-view="player">Player view</button><button class="secondary" data-view="admin">Admin review</button><button class="secondary" data-view="history">Test history</button></nav>
+  <section id="playerView" class="layout">
+    <div class="panel"><h2>Submit a test payment</h2><p class="muted">Enter sample details as a player would. No payment app is opened and no money is transferred.</p>
+      <form id="submitForm">
+        <div class="field"><label for="playerName">Player name</label><input id="playerName" name="playerName" maxlength="60" placeholder="e.g. TestPlayer248" required></div>
+        <div class="field"><label for="tournament">Test tournament</label><select id="tournament" name="tournament"><option>UPPS Test Solo #001</option><option>UPPS Test Duo #002</option><option>UPPS Test Squad #003</option></select></div>
+        <div class="field"><label for="registeredUid">Registered Free Fire UID</label><input id="registeredUid" name="registeredUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" placeholder="Digits from test profile" required></div>
+        <div class="field"><label for="noteUid">UID entered in payment note</label><input id="noteUid" name="noteUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" placeholder="UID written in note" required><span class="small">Use the same UID to test a match, or a different UID to test a mismatch.</span></div>
+        <div class="field"><label for="amount">Expected / simulated amount (₹)</label><input id="amount" name="amount" type="number" min="1" max="100000" step="0.01" value="40.00" required></div>
+        <div class="field"><label for="reference">Fictional transaction reference</label><input id="reference" name="reference" maxlength="40" placeholder="TEST-REF-001" required><span class="small">Use a unique test reference; duplicate entries will be flagged in the review queue.</span></div>
+        <label class="check"><input id="received" type="checkbox" required><span><b>Simulate payment received</b> — this only creates a test flag in this browser; it is not a bank or UPI confirmation.</span></label>
+        <div class="actions"><button type="submit">Submit test record</button><button type="button" class="secondary" id="fillExample">Fill example</button></div>
+        <p id="submitMessage" class="small" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+    <div class="panel"><h2>My test submissions</h2><p class="muted">Local test records for this browser only.</p><div id="playerRecords"></div></div>
+  </section>
+  <section id="adminView" class="hidden">
+    <div class="stats"><div class="stat"><span>Awaiting review</span><b id="statPending">0</b></div><div class="stat"><span>Approved (test)</span><b id="statApproved">0</b></div><div class="stat"><span>Rejected (test)</span><b id="statRejected">0</b></div><div class="stat"><span>UID mismatch</span><b id="statMismatch">0</b></div></div>
+    <div class="panel"><div class="record-head"><div><h2>Admin review queue</h2><p class="muted">Check UID match, simulated receipt flag, amount, and duplicate reference before recording a test decision.</p></div><button class="secondary" id="exportRecords" type="button">Export JSON</button></div><input class="search" id="adminSearch" placeholder="Search player, UID, tournament, reference…"><div id="adminRecords"></div></div>
+  </section>
+  <section id="historyView" class="hidden"><div class="panel"><div class="record-head"><div><h2>Test audit history</h2><p class="muted">Every test submission and decision recorded by this simulation.</p></div><button class="danger" id="clearRecords" type="button">Clear test data</button></div><div id="auditRecords"></div></div></section>
+  <footer class="foot">UPPS Payment Lab · Local browser storage only · Never enter real payment credentials or real transaction data.</footer>
+</div>
+<script>
+(() => {
+  const KEY = "upps_payment_simulation_lab_v1";
+  const $ = s => document.querySelector(s);
+  const esc = v => String(v ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+  const money = v => "₹" + Number(v || 0).toFixed(2);
+  const now = () => new Date().toISOString();
+  let records = read();
+  function read(){ try { const v=JSON.parse(localStorage.getItem(KEY)||"[]"); return Array.isArray(v)?v:[]; } catch { return []; } }
+  function save(){ localStorage.setItem(KEY, JSON.stringify(records)); render(); }
+  function log(r, action, note=""){ r.events ||= []; r.events.unshift({action,note,at:now()}); }
+  function statusPill(s){ const cls=s==="APPROVED"?"approved":s==="REJECTED"?"rejected":"pending"; return '<span class="pill '+cls+'">'+esc(s.replaceAll("_"," "))+'</span>'; }
+  function noteMatch(r){ return String(r.registeredUid).trim() === String(r.noteUid).trim(); }
+  function duplicateRef(r){ const ref=String(r.reference).trim().toUpperCase(); return records.some(x=>x.id!==r.id && String(x.reference).trim().toUpperCase()===ref); }
+  function checks(r){
+    const items=[
+      [noteMatch(r),"Payment-note UID matches registered UID"],
+      [r.simulatedReceived,"Simulated receipt flag is set"],
+      [Number(r.amount)===Number(r.expectedAmount),"Amount matches expected amount"],
+      [!duplicateRef(r),"Reference is not duplicated"]
+    ];
+    return items.map(([ok,label])=>'<div class="match '+(ok?'good':'bad')+'">'+(ok?'✓ ':'✕ ')+esc(label)+'</div>').join("");
+  }
+  function card(r, admin=false){
+    return '<article class="record"><div class="record-head"><div><h3>'+esc(r.playerName)+' · '+esc(r.tournament)+'</h3><div class="meta">Registered UID: <b>'+esc(r.registeredUid)+'</b> · Note UID: <b>'+esc(r.noteUid)+'</b></div></div><div style="display:grid;gap:6px;justify-items:end">'+statusPill(r.status)+'<span class="pill test">SIMULATED</span></div></div><div class="meta">Reference: '+esc(r.reference)+' · Amount: '+money(r.amount)+' · Submitted: '+esc(new Date(r.createdAt).toLocaleString())+'</div><div class="meta">Receipt flag: '+(r.simulatedReceived?'Set (simulated)':'Not set')+(r.reviewedAt?' · Reviewed: '+esc(new Date(r.reviewedAt).toLocaleString()):'')+'</div>'+ (admin?checks(r):'') + (r.adminNote?'<div class="match warn">Admin note: '+esc(r.adminNote)+'</div>':'')+(admin && r.status==="PENDING"?'<div class="actions"><button type="button" data-action="approve" data-id="'+esc(r.id)+'">Approve test record</button><button class="danger" type="button" data-action="reject" data-id="'+esc(r.id)+'">Reject test record</button></div>':'')+'</article>';
+  }
+  function render(){
+    const mine=[...records].sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    $("#playerRecords").innerHTML=mine.length?mine.map(r=>card(r)).join(""):'<div class="empty">No test submissions yet. Create one using fictional details.</div>';
+    $("#statPending").textContent=records.filter(r=>r.status==="PENDING").length;
+    $("#statApproved").textContent=records.filter(r=>r.status==="APPROVED").length;
+    $("#statRejected").textContent=records.filter(r=>r.status==="REJECTED").length;
+    $("#statMismatch").textContent=records.filter(r=>!noteMatch(r)).length;
+    const q=($("#adminSearch")?.value||"").toLowerCase();
+    const filtered=mine.filter(r=>[r.playerName,r.registeredUid,r.noteUid,r.tournament,r.reference,r.status].join(" ").toLowerCase().includes(q));
+    $("#adminRecords").innerHTML=filtered.length?filtered.map(r=>card(r,true)).join(""):'<div class="empty">No records match this search.</div>';
+    $("#auditRecords").innerHTML=mine.length?mine.map(r=>'<article class="record"><h3>'+esc(r.playerName)+' · '+esc(r.reference)+'</h3><div class="meta">'+esc(r.tournament)+' · '+statusPill(r.status)+'</div>'+((r.events||[]).map(e=>'<div class="meta">• '+esc(new Date(e.at).toLocaleString())+' — <b>'+esc(e.action)+'</b>'+(e.note?' · '+esc(e.note):'')+'</div>').join(""))+'</article>').join(""):'<div class="empty">No audit events yet.</div>';
+  }
+  document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll("[data-view]").forEach(b=>{b.classList.toggle("active",b===btn);b.classList.toggle("secondary",b!==btn);});
+    ["player","admin","history"].forEach(v=>$("#"+v+"View").classList.toggle("hidden",v!==btn.dataset.view));
+    render();
+  }));
+  $("#fillExample").addEventListener("click",()=>{
+    $("#playerName").value="TestPlayer248";$("#registeredUid").value="1234567890";$("#noteUid").value="1234567890";$("#amount").value="40.00";$("#reference").value="TEST-"+Math.random().toString(36).slice(2,10).toUpperCase();$("#received").checked=true;
+  });
+  $("#submitForm").addEventListener("submit",e=>{
+    e.preventDefault();
+    const fd=new FormData(e.currentTarget);
+    const r={id:crypto.randomUUID?crypto.randomUUID():"test-"+Date.now()+"-"+Math.random().toString(16).slice(2),playerName:String(fd.get("playerName")).trim(),tournament:String(fd.get("tournament")),registeredUid:String(fd.get("registeredUid")).trim(),noteUid:String(fd.get("noteUid")).trim(),amount:Number(fd.get("amount")),expectedAmount:Number(fd.get("amount")),reference:String(fd.get("reference")).trim(),simulatedReceived:$("#received").checked,status:"PENDING",createdAt:now(),reviewedAt:null,adminNote:"",events:[]};
+    if(!r.playerName||!r.registeredUid||!r.noteUid||!r.reference||!Number.isFinite(r.amount)||r.amount<=0||!r.simulatedReceived){$("#submitMessage").textContent="Complete all fields and tick the simulated receipt checkbox.";return;}
+    log(r,"TEST_SUBMITTED","Simulated record only; no money transferred.");records.unshift(r);save();e.currentTarget.reset();$("#amount").value="40.00";$("#submitMessage").textContent="Test record submitted to the local admin queue."; 
+  });
+  $("#adminSearch").addEventListener("input",render);
+  $("#adminRecords").addEventListener("click",e=>{
+    const btn=e.target.closest("button[data-action]");if(!btn)return;
+    const r=records.find(x=>x.id===btn.dataset.id);if(!r||r.status!=="PENDING")return;
+    if(btn.dataset.action==="approve"){
+      const failures=[];if(!noteMatch(r))failures.push("UID mismatch");if(!r.simulatedReceived)failures.push("no simulated receipt");if(Number(r.amount)!==Number(r.expectedAmount))failures.push("amount mismatch");if(duplicateRef(r))failures.push("duplicate reference");
+      if(failures.length){alert("Cannot approve test record. Resolve these checks first: "+failures.join(", ")+".");return;}
+      if(!confirm("Approve this SIMULATED test record? This will not confirm a real payment."))return;
+      r.status="APPROVED";r.adminNote="Approved in test simulation only.";
+      log(r,"TEST_APPROVED","Checks passed in local simulation.");
+    }else{
+      const reason=prompt("Reason for rejecting this test record:","UID or reference needs correction");if(reason===null)return;
+      r.status="REJECTED";r.adminNote=reason.trim()||"Rejected in test simulation.";
+      log(r,"TEST_REJECTED",r.adminNote);
+    }
+    r.reviewedAt=now();save();
+  });
+  $("#exportRecords").addEventListener("click",()=>{
+    const blob=new Blob([JSON.stringify({mode:"SIMULATION_ONLY",exportedAt:now(),records},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="upps-payment-simulation-test-data.json";a.click();URL.revokeObjectURL(url);
+  });
+  $("#clearRecords").addEventListener("click",()=>{
+    if(!confirm("Delete all local test records and test history? This cannot be undone."))return;
+    records=[];save();
+  });
+  render();
+})();
+</script>
+</body>
+</html>
