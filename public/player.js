@@ -118,7 +118,7 @@ function renderRegistration(x, profileUid) {
   const info = statusInfo(status);
   const paid = x.entry_type === "PAID";
   const paymentStatus = String(x.payment_status || (paid ? "NOT_SUBMITTED" : "NOT_REQUIRED"));
-  const canSubmitPayment = paid && paymentStatus !== "VERIFIED" && !["REJECTED","CANCELLED"].includes(status);
+  const canSubmitPayment = paid && ["NOT_SUBMITTED","REJECTED"].includes(paymentStatus) && !["REJECTED","CANCELLED"].includes(status);
 
   return `
     <div class="registration-card">
@@ -132,7 +132,8 @@ function renderRegistration(x, profileUid) {
       ${paid ? `
         <div class="registration-status ${paymentStatus==="VERIFIED"?"approved":paymentStatus==="REJECTED"?"rejected":"pending"}">
           <strong>Payment: ${esc(paymentStatus.replaceAll("_"," "))}</strong>
-          <p>${paymentStatus==="VERIFIED"?"Payment verified by the organizer. Registration approval is still shown separately above.":paymentStatus==="SUBMITTED"?"Your UTR has been submitted and is waiting for organizer verification.":paymentStatus==="REJECTED"?"Payment reference rejected. Check the note and submit a corrected UTR.":"Submit your UTR after paying the entry fee. The organizer will verify it manually."}</p>
+          <p><b>Entry fee:</b> ₹${Number(x.entry_fee||0).toFixed(2)}</p>
+          <p>${paymentStatus==="VERIFIED"?"Payment verified by the organizer. Registration approval is still shown separately above.":paymentStatus==="SUBMITTED"?"Your UTR is safely submitted and locked while the organizer checks it. Please do not pay again or submit another UTR while it is under review.":paymentStatus==="REJECTED"?"Payment reference rejected. Read the organizer note below, check your transaction details, and submit a corrected UTR only if needed.":"Pay the exact entry fee using the tournament's official UPPS QR/payment instructions. After the payment succeeds, submit the UTR shown by your payment app. Verification is manual, so keep your transaction receipt until approved."}</p>
           ${x.payment_note ? `<p><b>Organizer note:</b> ${esc(x.payment_note)}</p>` : ""}
           ${x.utr ? `<p><b>Submitted UTR:</b> ${esc(x.utr)}</p>` : ""}
           ${canSubmitPayment ? `
@@ -141,9 +142,9 @@ function renderRegistration(x, profileUid) {
                 <input name="freeFireUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" value="${esc(profileUid||"")}" required>
               </label>
               <label>UTR / transaction reference
-                <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" value="${esc(x.utr||"")}" placeholder="Enter UTR from your payment app" required>
+                <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" value="${esc(paymentStatus==="REJECTED"?"":x.utr||"")}" placeholder="Enter UTR from your payment app" required>
               </label>
-              <button class="btn primary" type="submit">${paymentStatus==="REJECTED"?"Resubmit payment reference":"Submit payment reference"}</button>
+              <button class="btn primary" type="submit">${paymentStatus==="REJECTED"?"Resubmit corrected UTR":"Submit payment reference"}</button>
               <p class="muted payment-message" role="status" aria-live="polite"></p>
             </form>
           ` : ""}
