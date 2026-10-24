@@ -133,18 +133,18 @@ function renderRegistration(x, profileUid) {
         <div class="registration-status ${paymentStatus==="VERIFIED"?"approved":paymentStatus==="REJECTED"?"rejected":"pending"}">
           <strong>Payment: ${esc(paymentStatus.replaceAll("_"," "))}</strong>
           <p><b>Entry fee:</b> ₹${Number(x.entry_fee||0).toFixed(2)}</p>
-          <p>${paymentStatus==="VERIFIED"?"Payment verified by the organizer. Registration approval is still shown separately above.":paymentStatus==="SUBMITTED"?"Your UTR is safely submitted and locked while the organizer checks it. Please do not pay again or submit another UTR while it is under review.":paymentStatus==="REJECTED"?"Payment reference rejected. Read the organizer note below, check your transaction details, and submit a corrected UTR only if needed.":"Pay the exact entry fee using the tournament's official UPPS QR/payment instructions. After the payment succeeds, submit the UTR shown by your payment app. Verification is manual, so keep your transaction receipt until approved."}</p>
+          <p>${paymentStatus==="VERIFIED"?"Payment verified by the organizer. Registration approval is still shown separately above.":paymentStatus==="SUBMITTED"?"Your UID is safely submitted and locked while the organizer checks it. Please do not pay again or submit another UID while it is under review.":paymentStatus==="REJECTED"?"Payment reference rejected. Read the organizer note below, check your transaction details, and submit a corrected UID only if needed.":"Pay the exact entry fee using the tournament's official UPPS QR/payment instructions. After the payment succeeds, submit your UID. Verification is manual, so keep your transaction receipt until approved."}</p>
           ${x.payment_note ? `<p><b>Organizer note:</b> ${esc(x.payment_note)}</p>` : ""}
-          ${x.utr ? `<p><b>Submitted UTR:</b> ${esc(x.utr)}</p>` : ""}
+          ${x.utr ? `<p><b>Submitted UID:</b> ${esc(x.utr)}</p>` : ""}
           ${canSubmitPayment ? `
             <form class="payment-reference-form" data-registration="${esc(x.public_id)}">
               <label>Free Fire UID (must match your profile)
                 <input name="freeFireUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" value="${esc(profileUid||"")}" required>
               </label>
-              <label>UTR / transaction reference
-                <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" value="${esc(paymentStatus==="REJECTED"?"":x.utr||"")}" placeholder="Enter UTR from your payment app" required>
+              <label>UID
+                <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" value="${esc(paymentStatus==="REJECTED"?"":x.utr||"")}" placeholder="Enter your Free Fire UID" required>
               </label>
-              <button class="btn primary" type="submit">${paymentStatus==="REJECTED"?"Resubmit corrected UTR":"Submit payment reference"}</button>
+              <button class="btn primary" type="submit">${paymentStatus==="REJECTED"?"Resubmit corrected UID":"Submit UID"}</button>
               <p class="muted payment-message" role="status" aria-live="polite"></p>
             </form>
           ` : ""}
@@ -188,7 +188,7 @@ document.addEventListener("submit", async event => {
   } finally {
     if (button.isConnected) {
       button.disabled = false;
-      button.textContent = "Submit payment reference";
+      button.textContent = "Submit UID";
     }
   }
 });
