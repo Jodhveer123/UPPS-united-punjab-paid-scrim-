@@ -80,7 +80,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-
   }
   document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>{
     document.querySelectorAll("[data-view]").forEach(b=>{b.classList.toggle("active",b===btn);b.classList.toggle("secondary",b!==btn);});
-    ["player","admin","history"].forEach(v=>$("#"+v+"View").classList.toggle("hidden",v!==btn.dataset.view+"View"));
+    ["player","admin","history"].forEach(v=>$("#"+v+"View").classList.toggle("hidden",v!==btn.dataset.view));
     render();
   }));
   $("#fillExample").addEventListener("click",()=>{
