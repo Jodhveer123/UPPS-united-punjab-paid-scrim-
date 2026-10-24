@@ -245,12 +245,12 @@ function paymentFormHTML(registration) {
   return `
     <form class="qr-payment-form" id="qrPaymentForm" data-registration="${esc(registration.public_id)}">
       <h3>Submit your payment details</h3>
-      <p class="muted">After paying using the QR code above, enter your Free Fire UID and UTR/transaction reference here.</p>
+      <p class="muted">After paying using the QR code above, enter your Free Fire UID here.</p>
       <label>Free Fire UID
         <input name="freeFireUid" inputmode="numeric" pattern="[0-9]{5,20}" minlength="5" maxlength="20" placeholder="Enter your Free Fire UID" required>
       </label>
-      <label>UTR / transaction reference
-        <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" placeholder="Enter UTR from your payment app" required>
+      <label>Free Fire UID
+        <input name="utr" minlength="6" maxlength="40" pattern="[A-Za-z0-9-]{6,40}" placeholder="Enter your Free Fire UID" required>
       </label>
       <button class="btn primary" type="submit">Submit payment details</button>
       <p class="muted qr-payment-message" role="status" aria-live="polite"></p>
@@ -280,7 +280,7 @@ function attachPaymentForm(modal, registration) {
       const data = await response.json().catch(()=>({}));
       if (response.status===401) { location.href="/login.html"; return; }
       if (!response.ok || !data.ok) throw new Error(data.error || "Could not submit payment details.");
-      message.textContent = "Payment details submitted. Admin will review your UTR.";
+      message.textContent = "Payment details submitted. Admin will review your UID.";
       button.textContent = "Submitted for review";
       button.disabled = true;
     } catch(error) {
