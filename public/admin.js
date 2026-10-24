@@ -76,9 +76,25 @@ function renderPayments(){
   const input=$("#paymentUidSearch");
   if(!input)return;
   const q=input.value.trim().toLowerCase();
-  const rows=state.registrations.filter(r=>r.entry_type==="PAID" && q && [r.free_fire_uid,r.username,r.display_name,r.public_id,r.title,r.utr].some(v=>String(v||"").toLowerCase().includes(q)));
-  $("#paymentSearchHint").textContent=!q?"Enter at least part of a UID or username to find registrations.":`${rows.length} paid registration(s) found.`;
-  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>${esc(r.public_id)}</small></td><td>₹${Number(r.entry_fee||0).toFixed(2)}</td><td>${esc(r.utr||"Not submitted")}</td><td><b>${esc(r.payment_status||"NOT_SUBMITTED")}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td>${r.payment_status==="SUBMITTED"?`<div class="payment-action-stack"><button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button></div>`:r.payment_status==="VERIFIED"?"Verified":r.payment_status==="REJECTED"?"Rejected — player may resubmit":"Awaiting player UTR"}<button class="btn secondary payment-history" data-id="${r.id}" type="button">History</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No paid registration matched that search.":"Search by player UID to see payment records."}</td></tr>`;
+  const filter=$("#paymentStatusFilter")?.value||"ACTION";
+  const paid=state.registrations.filter(r=>r.entry_type==="PAID");
+  const countStatus=s=>paid.filter(r=>(r.payment_status||"NOT_SUBMITTED")===s).length;
+  $("#paymentStatSubmitted").textContent=countStatus("SUBMITTED");
+  $("#paymentStatVerifiedAmount").textContent="₹"+paid.filter(r=>r.payment_status==="VERIFIED").reduce((sum,r)=>sum+Number(r.entry_fee||0),0).toLocaleString("en-IN",{maximumFractionDigits:2,minimumFractionDigits:2});
+  $("#paymentStatRejected").textContent=countStatus("REJECTED");
+  $("#paymentStatNotSubmitted").textContent=countStatus("NOT_SUBMITTED");
+  let rows=paid.filter(r=>{
+    const status=r.payment_status||"NOT_SUBMITTED";
+    const matchesQuery=!q||[r.free_fire_uid,r.username,r.display_name,r.public_id,r.title,r.utr,r.payment_note].some(v=>String(v||"").toLowerCase().includes(q));
+    const matchesStatus=filter==="ALL"||(filter==="ACTION"?["SUBMITTED","REJECTED","NOT_SUBMITTED"].includes(status)&&status==="SUBMITTED":status===filter);
+    return matchesQuery&&matchesStatus;
+  });
+  rows.sort((a,b)=>{
+    const rank={"SUBMITTED":0,"REJECTED":1,"NOT_SUBMITTED":2,"VERIFIED":3};
+    return (rank[a.payment_status||"NOT_SUBMITTED"]??4)-(rank[b.payment_status||"NOT_SUBMITTED"]??4)||new Date(b.payment_submitted_at||b.created_at||0)-new Date(a.payment_submitted_at||a.created_at||0);
+  });
+  $("#paymentSearchHint").textContent=`${rows.length} shown · ${countStatus("SUBMITTED")} awaiting review · ${countStatus("VERIFIED")} verified`;
+  $("#paymentsTable").innerHTML=rows.map(r=>`<tr><td><b>${esc(r.display_name||r.username)}</b><small>@${esc(r.username)}</small><small>Free Fire UID: ${esc(r.free_fire_uid||"Not set")}</small></td><td>${esc(r.title)}<small>Registration: ${esc(r.public_id)}</small></td><td><b>₹${Number(r.entry_fee||0).toFixed(2)}</b></td><td><b>${esc(r.utr||"Not submitted")}</b>${r.payment_submitted_at?`<small>Submitted: ${esc(fmt(r.payment_submitted_at))}</small>`:""}${r.utr?`<button class="btn secondary payment-copy-utr" data-utr="${esc(r.utr)}" type="button">Copy UTR</button>`:""}</td><td><b>${esc((r.payment_status||"NOT_SUBMITTED").replaceAll("_"," "))}</b>${r.payment_note?`<small>Note: ${esc(r.payment_note)}</small>`:""}</td><td>${pill(r.status)}</td><td><div class="payment-action-stack">${r.payment_status==="SUBMITTED"?`<button class="btn primary payment-review" data-id="${r.id}" data-status="VERIFIED" type="button">Verify</button><button class="btn danger payment-review" data-id="${r.id}" data-status="REJECTED" type="button">Reject</button>`:""}<button class="btn secondary payment-history" data-id="${r.id}" type="button">History</button></div></td></tr>`).join("")||`<tr><td colspan="7" class="empty">${q?"No matching payment records.":filter==="ACTION"?"No payments are awaiting review.":"No paid registrations match this filter."}</td></tr>`;
 }
 function renderRegistrations(){
   const filter=$("#registrationFilter").value; const rows=state.registrations.filter(r=>filter==="ALL"||r.status===filter);
@@ -128,7 +144,17 @@ $("#adminLogoutBtn").addEventListener("click",async()=>{await api("/api/admin/lo
 $("#playerSearch").addEventListener("input",renderPlayers);
 $("#registrationFilter").addEventListener("change",renderRegistrations);
 $("#paymentUidSearch").addEventListener("input",renderPayments);
+$("#paymentStatusFilter").addEventListener("change",renderPayments);
 $("#clearPaymentSearch").addEventListener("click",()=>{$("#paymentUidSearch").value="";renderPayments();$("#paymentUidSearch").focus();});
+$("#refreshPayments").addEventListener("click",async()=>{const b=$("#refreshPayments");b.disabled=true;try{await loadRegistrations();renderAll();msg("Payment records refreshed.");}catch(err){msg(err.message,true);}finally{b.disabled=false;}});
+$("#paymentsTable").addEventListener("click",async e=>{
+  const copy=e.target.closest(".payment-copy-utr");if(!copy)return;
+  try{
+    if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(copy.dataset.utr);
+    else {const ta=document.createElement("textarea");ta.value=copy.dataset.utr;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw new Error("Clipboard unavailable");}
+    msg("UTR copied.");
+  }catch{msg("Could not copy automatically. Select the UTR text and copy it manually.",true);}
+});
 $("#reviewFilter").addEventListener("change",renderReviews);
 $("#refreshCancelled").addEventListener("click",async()=>{await loadCancelled();renderCancelled();});
 $("#cancelledTournamentsList").addEventListener("click",async e=>{const b=e.target.closest(".restore-cancelled");if(!b)return;const t=state.cancelled.find(x=>String(x.id)===b.dataset.id);if(!t||!confirm(`Reopen "${t.title}" and make it visible again?`))return;try{await api(`/api/admin/tournaments/${t.id}/status`,{method:"PATCH",body:JSON.stringify({status:"REGISTRATION OPEN"})});await Promise.all([loadCancelled(),loadTournaments()]);renderAll();msg("Tournament reopened.");}catch(err){msg(err.message,true);}});
