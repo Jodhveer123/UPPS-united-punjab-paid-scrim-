@@ -119,13 +119,20 @@
       </section>
 
       <section id="section-payments" class="admin-section">
-        <div class="section-head"><div><h2>Payment Verification</h2><p>Search a registered player's Free Fire UID, inspect their tournament and UTR, then verify or reject the payment.</p></div></div>
-        <div class="admin-card payment-search-card">
-          <label for="paymentUidSearch">Search by Free Fire UID or username</label>
-          <div class="payment-search-row"><input id="paymentUidSearch" type="search" placeholder="Enter player UID or username…"><button id="clearPaymentSearch" class="btn secondary" type="button">Clear</button></div>
-          <p id="paymentSearchHint" class="muted">Enter at least part of a UID or username to find registrations.</p>
+        <div class="section-head"><div><h2>Payment Center</h2><p>Review UPI payments in one place. Always match the UTR and amount against your actual UPI transaction history before verifying.</p></div><button id="refreshPayments" class="btn secondary" type="button">Refresh payments</button></div>
+        <div class="payment-stats-grid">
+          <div class="stat-card"><span>Awaiting Review</span><strong id="paymentStatSubmitted">0</strong></div>
+          <div class="stat-card"><span>Verified Amount</span><strong id="paymentStatVerifiedAmount">₹0</strong></div>
+          <div class="stat-card"><span>Rejected</span><strong id="paymentStatRejected">0</strong></div>
+          <div class="stat-card"><span>Awaiting UTR</span><strong id="paymentStatNotSubmitted">0</strong></div>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Player / UID</th><th>Tournament</th><th>Entry fee</th><th>UTR</th><th>Payment status</th><th>Registration</th><th>Review action</th></tr></thead><tbody id="paymentsTable"><tr><td colspan="7" class="empty">Search for a player to review payments.</td></tr></tbody></table></div>
+        <div class="admin-card payment-search-card">
+          <label for="paymentUidSearch">Search payments</label>
+          <div class="payment-search-row"><input id="paymentUidSearch" type="search" placeholder="UID, username, registration ID, tournament or UTR…"><button id="clearPaymentSearch" class="btn secondary" type="button">Clear</button></div>
+          <div class="payment-filter-row"><label for="paymentStatusFilter">Payment status</label><select id="paymentStatusFilter"><option value="ACTION">Needs attention (default)</option><option value="ALL">All paid registrations</option><option value="SUBMITTED">Awaiting review</option><option value="VERIFIED">Verified</option><option value="REJECTED">Rejected</option><option value="NOT_SUBMITTED">Awaiting UTR</option></select></div>
+          <p id="paymentSearchHint" class="muted">Showing payments that need attention first.</p>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Player / UID</th><th>Tournament / Registration</th><th>Fee</th><th>UTR / Submitted</th><th>Payment status</th><th>Registration</th><th>Action</th></tr></thead><tbody id="paymentsTable"><tr><td colspan="7" class="empty">Loading payment records…</td></tr></tbody></table></div>
       </section>
 
       <section id="section-results" class="admin-section">
