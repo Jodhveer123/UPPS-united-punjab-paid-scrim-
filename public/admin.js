@@ -86,7 +86,7 @@ function renderPayments(){
   let rows=paid.filter(r=>{
     const status=r.payment_status||"NOT_SUBMITTED";
     const matchesQuery=!q||[r.free_fire_uid,r.username,r.display_name,r.public_id,r.title,r.utr,r.payment_note].some(v=>String(v||"").toLowerCase().includes(q));
-    const matchesStatus=filter==="ALL"||(filter==="ACTION"?["SUBMITTED","REJECTED","NOT_SUBMITTED"].includes(status)&&status==="SUBMITTED":status===filter);
+    const matchesStatus=filter==="ALL"||(filter==="ACTION"?(q?true:status==="SUBMITTED"):status===filter);
     return matchesQuery&&matchesStatus;
   });
   rows.sort((a,b)=>{
