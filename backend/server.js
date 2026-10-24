@@ -1338,7 +1338,7 @@ app.post(
       await client.query("BEGIN");
       transactionOpen = true;
       const r = await client.query(
-        `SELECT r.id, r.public_id, r.status, r.payment_status, t.id AS tournament_id,
+        `SELECT r.id, r.public_id, r.status, r.payment_status, r.utr, t.id AS tournament_id,
                 t.entry_type, t.entry_fee, p.free_fire_uid
          FROM registrations r
          JOIN tournaments t ON t.id=r.tournament_id
@@ -1367,6 +1367,15 @@ app.post(
       if (reg.payment_status === "VERIFIED") {
         await client.query("ROLLBACK"); transactionOpen = false;
         return sendError(res, 409, "Payment is already verified. Contact the organizer if you think this is incorrect.");
+      }
+      // Make retries safe, but do not let a player replace the reference while an admin is reviewing it.
+      if (reg.payment_status === "SUBMITTED") {
+        if (String(reg.utr || "").trim().toUpperCase() === utr.toUpperCase()) {
+          await client.query("ROLLBACK"); transactionOpen = false;
+          return res.json({ok:true, payment:{public_id:reg.public_id,payment_status:"SUBMITTED"}, message:"This UTR is already submitted and waiting for organizer verification. No duplicate submission was created."});
+        }
+        await client.query("ROLLBACK"); transactionOpen = false;
+        return sendError(res, 409, "Your payment is already under review. Please wait for the organizer's decision before changing the UTR.");
       }
 
       const claim = await client.query(
