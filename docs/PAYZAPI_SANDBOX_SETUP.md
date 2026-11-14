@@ -44,3 +44,19 @@ A successful simulated event returns `TEST_VERIFIED`. Repeating the same event i
 - Do not add live provider keys or use this test harness to verify real payments.
 
 The mock route implementation is in `backend/server.js`; the environment variable template is `.env.example`.
+
+
+## QR-triggered signal demo (no API keys required)
+
+The player dashboard also includes a separate **QR Signal Verification** panel:
+
+1. A signed-in player clicks **Generate QR session**.
+2. The backend creates a random, one-time token and stores only its SHA-256 hash in `demo_access_sessions`. The session expires after five minutes.
+3. The dashboard renders a QR locally in the browser. Scanning it opens `/demo-confirm.html` on the UPPS site.
+4. The phone page accepts any short non-empty text (1–32 characters) and sends it to `POST /api/demo-access/confirm`.
+5. The backend checks the one-time token, expiry, and session state, then changes only that demo session to `TEST_ACCESS_GRANTED`.
+6. The dashboard polls `GET /api/demo-access/status/:sessionId` every two seconds and displays **ACCESS GRANTED — TEST MODE** when the backend confirms it.
+
+This flow uses no payment provider, payment API key, webhook secret, QR payment app, or money. The QR is simply a one-time link to a test confirmation page. The website's polling response acts as its live notification. The status is not connected to tournament registration approval, paid-entry verification, or room credentials.
+
+The QR generator is loaded in the browser from the QRCode.js CDN. If that external script is blocked, the dashboard displays an error and the QR cannot be rendered.
