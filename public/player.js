@@ -41,6 +41,25 @@ async function load() {
           <p class="muted">${esc(p.public_id)}</p>
         </div>
       </div>
+
+      <section class="panel qr-demo-panel">
+        <div class="qr-demo-heading">
+          <div><span class="eyebrow">LIVE BACKEND DEMO</span><h2>QR Signal Verification</h2>
+            <p class="muted">Scan the one-time QR with your phone and send any short letter or text. Watch this dashboard update.</p>
+          </div>
+          <span class="qr-demo-tag">TEST MODE</span>
+        </div>
+        <div class="qr-demo-content">
+          <div class="qr-demo-art"><div id="demoQrCode"><div class="qr-placeholder">QR will appear here</div></div></div>
+          <div class="qr-demo-info">
+            <div class="qr-demo-status" id="demoQrStatus" role="status" aria-live="polite"><span class="demo-pulse"></span> Waiting to start a test session</div>
+            <p class="muted" id="demoQrHelp">A secure one-time QR expires after five minutes. It does not make a payment or approve a tournament.</p>
+            <div class="row"><b>Session ID</b><code id="demoQrSession">—</code></div>
+            <button class="btn primary" id="startQrDemo" type="button">Generate QR session</button>
+            <button class="btn" id="refreshQrDemo" type="button" hidden>Generate another QR</button>
+          </div>
+        </div>
+      </section>
       <div class="grid2">
         <section class="panel">
           <h2>Profile</h2>
@@ -69,6 +88,8 @@ async function load() {
       </section>
       <a class="btn" href="/tournaments.html">Find a tournament</a>
     `;
+
+    initQrDemo();
 
     for (const registration of registrations.filter(x => x.status === "VERIFIED")) {
       loadTournamentRooms(registration.tournament_public_id);
@@ -192,6 +213,94 @@ document.addEventListener("submit", async event => {
     }
   }
 });
+
+
+let qrDemoPoll = null;
+let qrDemoNotified = false;
+
+function initQrDemo() {
+  const start = document.getElementById("startQrDemo");
+  const again = document.getElementById("refreshQrDemo");
+  if (!start || start.dataset.bound) return;
+  start.dataset.bound = "1";
+  start.addEventListener("click", createQrDemoSession);
+  again?.addEventListener("click", createQrDemoSession);
+}
+
+async function createQrDemoSession() {
+  const start = document.getElementById("startQrDemo");
+  const again = document.getElementById("refreshQrDemo");
+  const qr = document.getElementById("demoQrCode");
+  const status = document.getElementById("demoQrStatus");
+  const sessionLabel = document.getElementById("demoQrSession");
+  if (!start || !qr || !status) return;
+  clearInterval(qrDemoPoll);
+  start.disabled = true;
+  start.textContent = "Creating secure session…";
+  status.textContent = "Connecting to UPPS backend…";
+  qr.innerHTML = '<div class="qr-placeholder">Generating secure QR…</div>';
+  try {
+    const response = await fetch("/api/demo-access/create", {
+      method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:"{}"
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) { location.href="/login.html"; return; }
+    if (!response.ok || !data.ok) throw new Error(data.error || "Could not create QR session.");
+    sessionLabel.textContent = data.sessionId;
+    const confirmUrl = location.origin + "/demo-confirm.html?token=" + encodeURIComponent(data.token);
+    qr.innerHTML = "";
+    if (typeof QRCode === "undefined") {
+      qr.innerHTML = '<p class="muted">QR generator did not load. Refresh this page and try again.</p>';
+      throw new Error("QR library unavailable.");
+    }
+    new QRCode(qr, {text:confirmUrl,width:220,height:220,colorDark:"#120d1d",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+    status.innerHTML = '<span class="demo-pulse"></span> QR ready — waiting for your phone';
+    start.hidden = true;
+    again.hidden = false;
+    start.disabled = false;
+    start.textContent = "Generate QR session";
+    qrDemoNotified = false;
+    pollQrDemoStatus(data.sessionId);
+  } catch (error) {
+    status.textContent = error.message || "Could not start test.";
+    start.disabled = false;
+    start.textContent = "Try again";
+  }
+}
+
+function pollQrDemoStatus(sessionId) {
+  clearInterval(qrDemoPoll);
+  const status = document.getElementById("demoQrStatus");
+  const help = document.getElementById("demoQrHelp");
+  const poll = async () => {
+    try {
+      const response = await fetch("/api/demo-access/status/" + encodeURIComponent(sessionId), {
+        credentials:"same-origin", cache:"no-store"
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || "Status check failed.");
+      if (data.session.status === "TEST_ACCESS_GRANTED") {
+        clearInterval(qrDemoPoll);
+        status.className = "qr-demo-status granted";
+        status.textContent = "✓ ACCESS GRANTED — TEST MODE";
+        help.textContent = "Backend confirmation received. Test signal: " + data.session.submitted_text + ". No tournament registration was changed.";
+        if (!qrDemoNotified && "Notification" in window && Notification.permission === "granted") {
+          new Notification("UPPS test confirmed", {body:"QR signal received. Demo access granted."});
+        }
+        qrDemoNotified = true;
+      } else if (data.session.status === "EXPIRED") {
+        clearInterval(qrDemoPoll);
+        status.className = "qr-demo-status expired";
+        status.textContent = "QR EXPIRED — GENERATE A NEW ONE";
+        help.textContent = "This one-time session expired without a confirmation.";
+      }
+    } catch (error) {
+      status.textContent = error.message || "Waiting for backend status…";
+    }
+  };
+  poll();
+  qrDemoPoll = setInterval(poll, 2000);
+}
 
 function statusInfo(status) {
   if (status === "VERIFIED") {
