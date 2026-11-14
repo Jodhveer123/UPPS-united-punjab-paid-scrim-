@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
@@ -238,6 +239,196 @@ function requireRole(...allowedRoles) {
 async function query(text, params = []) {
   return pool.query(text, params);
 }
+
+/*
+ * MOCK-ONLY PAYMENT VERIFICATION DEMO.
+ * No payment provider is contacted. These routes only update isolated demo
+ * records and NEVER alter registrations, tournament access, rooms, or prizes.
+ */
+const demoPaymentKey = process.env.DEMO_PAYMENT_API_KEY;
+const demoWebhookKey = process.env.DEMO_WEBHOOK_KEY;
+let demoPaymentTablesReady;
+
+async function ensureDemoPaymentTables() {
+  if (!demoPaymentTablesReady) {
+    demoPaymentTablesReady = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS demo_payment_tests (
+          id BIGSERIAL PRIMARY KEY,
+          test_id TEXT NOT NULL UNIQUE,
+          player_id BIGINT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+          expected_amount NUMERIC(12,2) NOT NULL DEFAULT 1.00,
+          currency TEXT NOT NULL DEFAULT 'TEST',
+          checkout_reference TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'TEST_PENDING'
+            CHECK (status IN ('TEST_PENDING','TEST_VERIFIED','TEST_FAILED')),
+          verified_event_id TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          verified_at TIMESTAMPTZ
+        )
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS demo_payment_event_ids (
+          event_id TEXT PRIMARY KEY,
+          test_id TEXT NOT NULL,
+          received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+    })().catch(error => {
+      demoPaymentTablesReady = null;
+      throw error;
+    });
+  }
+  return demoPaymentTablesReady;
+}
+
+function safeDemoSecretEqual(actual, expected) {
+  if (typeof actual !== "string" || typeof expected !== "string") return false;
+  const a = Buffer.from(actual);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function makeDemoCheckoutReference(testId) {
+  return crypto.createHmac("sha256", demoPaymentKey)
+    .update(`${testId}|1.00|TEST`)
+    .digest("hex");
+}
+
+// Creates a fake TEST order. DEMO_PAYMENT_API_KEY signs its internal reference;
+// it is never sent to a browser or to an external service.
+app.post("/api/demo-payments/create", auth("PLAYER"), async (req, res) => {
+  try {
+    if (!demoPaymentKey) {
+      return sendError(res, 503, "Mock demo disabled: configure DEMO_PAYMENT_API_KEY in Vercel Preview.");
+    }
+    await ensureDemoPaymentTables();
+    const testId = id("TESTPAY");
+    const checkoutReference = makeDemoCheckoutReference(testId);
+    await query(
+      `INSERT INTO demo_payment_tests
+        (test_id, player_id, expected_amount, currency, checkout_reference)
+       VALUES ($1,$2,1.00,'TEST',$3)`,
+      [testId, req.auth.id, checkoutReference]
+    );
+    return res.status(201).json({
+      ok: true,
+      mode: "MOCK_ONLY",
+      testPayment: {
+        testId,
+        amount: "1.00",
+        currency: "TEST",
+        status: "TEST_PENDING",
+        checkoutReference
+      },
+      note: "Simulated test record only. No payment request or transfer was created."
+    });
+  } catch (error) {
+    console.error("Mock payment create error:", error.message);
+    return sendError(res, 500, "Could not create the mock test record.");
+  }
+});
+
+// A test sender posts this event with x-demo-webhook-key. The order reference
+// is also checked, so a matching webhook key alone cannot verify another order.
+app.post("/api/demo-payments/webhook", async (req, res) => {
+  if (!demoWebhookKey || !safeDemoSecretEqual(req.get("x-demo-webhook-key"), demoWebhookKey)) {
+    return sendError(res, 401, "Invalid mock webhook key.");
+  }
+  const { eventId, event, testId, amount, currency, checkoutReference } = req.body || {};
+  if (!eventId || !event || !testId || amount === undefined || !currency || !checkoutReference) {
+    return sendError(res, 400, "Missing required mock webhook fields.");
+  }
+  if (event !== "payment.confirmed") {
+    return sendError(res, 400, "Unsupported mock event. Expected payment.confirmed.");
+  }
+
+  try {
+    if (!demoPaymentKey) {
+      return sendError(res, 503, "Mock demo disabled: configure DEMO_PAYMENT_API_KEY.");
+    }
+    await ensureDemoPaymentTables();
+    const expectedReference = makeDemoCheckoutReference(String(testId));
+    if (
+      String(amount) !== "1.00" ||
+      String(currency) !== "TEST" ||
+      !safeDemoSecretEqual(String(checkoutReference), expectedReference)
+    ) {
+      return sendError(res, 400, "Test order reference, amount, or currency did not match.");
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const found = await client.query(
+        "SELECT * FROM demo_payment_tests WHERE test_id=$1 FOR UPDATE",
+        [String(testId)]
+      );
+      if (!found.rowCount) {
+        await client.query("ROLLBACK");
+        return sendError(res, 404, "Mock test order not found.");
+      }
+      const record = found.rows[0];
+      if (record.status === "TEST_VERIFIED") {
+        await client.query("ROLLBACK");
+        return res.json({ok:true, duplicate:true, status:"TEST_VERIFIED", note:"Already verified; no second update was made."});
+      }
+      if (
+        String(record.expected_amount) !== "1.00" ||
+        record.currency !== "TEST" ||
+        !safeDemoSecretEqual(record.checkout_reference, expectedReference)
+      ) {
+        await client.query("ROLLBACK");
+        return sendError(res, 400, "Stored test order does not match.");
+      }
+      const reserved = await client.query(
+        "INSERT INTO demo_payment_event_ids(event_id,test_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING event_id",
+        [String(eventId), String(testId)]
+      );
+      if (!reserved.rowCount) {
+        await client.query("ROLLBACK");
+        return res.json({ok:true, duplicate:true, status:record.status, note:"Duplicate event ignored."});
+      }
+      await client.query(
+        "UPDATE demo_payment_tests SET status='TEST_VERIFIED', verified_event_id=$1, verified_at=NOW() WHERE test_id=$2 AND status='TEST_PENDING'",
+        [String(eventId), String(testId)]
+      );
+      await client.query("COMMIT");
+      return res.json({
+        ok:true,
+        mode:"MOCK_ONLY",
+        status:"TEST_VERIFIED",
+        testId:String(testId),
+        note:"Mock confirmation accepted. No tournament registration or access state was changed."
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Mock webhook error:", error.message);
+    return sendError(res, 500, "Could not process the mock webhook.");
+  }
+});
+
+app.get("/api/demo-payments/:testId", auth("PLAYER"), async (req, res) => {
+  try {
+    await ensureDemoPaymentTables();
+    const result = await query(
+      `SELECT test_id, expected_amount AS amount, currency, status, created_at, verified_at
+       FROM demo_payment_tests WHERE test_id=$1 AND player_id=$2`,
+      [req.params.testId, req.auth.id]
+    );
+    if (!result.rowCount) return sendError(res, 404, "Mock test order not found.");
+    return res.json({ok:true, mode:"MOCK_ONLY", testPayment:result.rows[0]});
+  } catch (error) {
+    console.error("Mock payment status error:", error.message);
+    return sendError(res, 500, "Could not load mock test status.");
+  }
+});
+
 
 let paymentColumnsReady;
 async function ensurePaymentColumns() {
