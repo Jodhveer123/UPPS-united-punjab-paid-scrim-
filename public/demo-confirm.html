@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090711">
+  <title>Confirm QR Signal | UPPS</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .signal-wrap{max-width:560px;margin:9vh auto;padding:22px}
+    .signal-card{padding:clamp(22px,5vw,38px);border:1px solid rgba(179,126,255,.22);border-radius:22px;background:linear-gradient(145deg,rgba(24,19,36,.98),rgba(13,11,20,.98));box-shadow:0 22px 70px rgba(0,0,0,.35)}
+    .signal-card h1{font-size:clamp(30px,7vw,44px);margin:10px 0}
+    .signal-card p{color:#c4b9d6;line-height:1.65}
+    .signal-card label{display:grid;gap:8px;margin:22px 0 12px;color:#e2d8f3;font-weight:700}
+    .signal-card input{width:100%;box-sizing:border-box;min-height:50px;padding:12px 14px;border:1px solid rgba(190,155,255,.25);border-radius:11px;background:#100d18;color:#fff;font:inherit}
+    .signal-card .btn{width:100%;justify-content:center}
+    .signal-status{min-height:24px;margin-top:14px;font-weight:700;overflow-wrap:anywhere}
+    .signal-status.good{color:#aaffce}.signal-status.bad{color:#ffb5c4}
+    .signal-mark{width:48px;height:48px;display:grid;place-items:center;border-radius:15px;background:rgba(151,91,255,.15);color:#d9baff;font-size:24px}
+  </style>
+</head>
+<body>
+  <header class="nav"><a class="logo" href="/">UPPS</a><nav><a href="/">Home</a></nav></header>
+  <main class="signal-wrap">
+    <section class="signal-card">
+      <div class="signal-mark">⌁</div>
+      <span class="eyebrow">SECURE QR SIGNAL / TEST MODE</span>
+      <h1>Confirm your test session</h1>
+      <p>This QR belongs to a temporary UPPS demo session. Enter any short letter or text and send it to the backend. No payment is made.</p>
+      <form id="signalForm">
+        <label for="signalText">Your test signal</label>
+        <input id="signalText" name="message" maxlength="32" autocomplete="off" placeholder="Type any letter — e.g. A" required>
+        <button class="btn primary" type="submit" id="sendSignal">Send confirmation signal</button>
+      </form>
+      <div class="signal-status" id="signalStatus" role="status" aria-live="polite"></div>
+      <p><small>After the backend accepts this signal, return to the dashboard. It will display <b>ACCESS GRANTED — TEST MODE</b>.</small></p>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token") || "";
+    const form = document.getElementById("signalForm");
+    const input = document.getElementById("signalText");
+    const button = document.getElementById("sendSignal");
+    const status = document.getElementById("signalStatus");
+    if (!/^[A-Za-z0-9_-]{32,100}$/.test(token)) {
+      form.hidden = true;
+      status.className = "signal-status bad";
+      status.textContent = "This QR link is invalid. Generate a new QR from your UPPS dashboard.";
+    }
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) { status.className="signal-status bad"; status.textContent="Enter any short letter or text."; return; }
+      button.disabled = true;
+      button.textContent = "Sending to backend…";
+      status.className = "signal-status";
+      status.textContent = "Contacting UPPS test endpoint…";
+      try {
+        const response = await fetch("/api/demo-access/confirm", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({token,message})
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) throw new Error(data.error || "Could not send test signal.");
+        form.hidden = true;
+        status.className = "signal-status good";
+        status.textContent = "✓ Signal received by backend. You can return to the UPPS dashboard.";
+      } catch (error) {
+        status.className = "signal-status bad";
+        status.textContent = error.message || "Network error. Try again.";
+        button.disabled = false;
+        button.textContent = "Send confirmation signal";
+      }
+    });
+  </script>
+</body>
+</html>
