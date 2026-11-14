@@ -413,6 +413,125 @@ app.post("/api/demo-payments/webhook", async (req, res) => {
   }
 });
 
+
+/*
+ * QR-triggered mock access demonstration.
+ * The QR token grants access only to this isolated demo status, never to
+ * tournament registrations, match rooms, prizes, or paid-entry controls.
+ */
+let demoAccessTablesReady;
+async function ensureDemoAccessTable() {
+  if (!demoAccessTablesReady) {
+    demoAccessTablesReady = query(`
+      CREATE TABLE IF NOT EXISTS demo_access_sessions (
+        id BIGSERIAL PRIMARY KEY,
+        session_id TEXT NOT NULL UNIQUE,
+        token_hash TEXT NOT NULL UNIQUE,
+        player_id BIGINT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'WAITING'
+          CHECK (status IN ('WAITING','TEST_ACCESS_GRANTED','EXPIRED')),
+        submitted_text TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL,
+        confirmed_at TIMESTAMPTZ
+      )
+    `).catch(error => {
+      demoAccessTablesReady = null;
+      throw error;
+    });
+  }
+  return demoAccessTablesReady;
+}
+
+function hashDemoAccessToken(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+app.post("/api/demo-access/create", auth("PLAYER"), async (req, res) => {
+  try {
+    await ensureDemoAccessTable();
+    const sessionId = id("QRTEST");
+    const token = crypto.randomBytes(32).toString("base64url");
+    const tokenHash = hashDemoAccessToken(token);
+    await query(
+      `INSERT INTO demo_access_sessions
+        (session_id, token_hash, player_id, expires_at)
+       VALUES ($1,$2,$3,NOW() + INTERVAL '5 minutes')`,
+      [sessionId, tokenHash, req.auth.id]
+    );
+    return res.status(201).json({
+      ok: true,
+      mode: "MOCK_ONLY",
+      sessionId,
+      token,
+      status: "WAITING",
+      expiresInSeconds: 300,
+      note: "QR test only. Confirmation does not approve tournament entry."
+    });
+  } catch (error) {
+    console.error("QR demo create error:", error.message);
+    return sendError(res, 500, "Could not create the QR test session.");
+  }
+});
+
+// Public phone endpoint: possession of the one-time QR token is required.
+// Any short non-empty text is accepted as a mock signal, not as payment proof.
+app.post("/api/demo-access/confirm", async (req, res) => {
+  const token = String(req.body?.token || "");
+  const message = String(req.body?.message || "").trim();
+  if (!/^[A-Za-z0-9_-]{32,100}$/.test(token)) {
+    return sendError(res, 400, "Invalid or missing QR session token.");
+  }
+  if (!message || message.length > 32) {
+    return sendError(res, 400, "Enter any short letter or text (1–32 characters).");
+  }
+  try {
+    await ensureDemoAccessTable();
+    const result = await query(
+      `UPDATE demo_access_sessions
+       SET status='TEST_ACCESS_GRANTED', submitted_text=$1, confirmed_at=NOW()
+       WHERE token_hash=$2 AND status='WAITING' AND expires_at > NOW()
+       RETURNING session_id, status, confirmed_at`,
+      [message, hashDemoAccessToken(token)]
+    );
+    if (!result.rowCount) {
+      return sendError(res, 410, "This QR session is invalid, expired, or already used. Generate a new QR.");
+    }
+    return res.json({
+      ok: true,
+      mode: "MOCK_ONLY",
+      status: "TEST_ACCESS_GRANTED",
+      sessionId: result.rows[0].session_id,
+      message: "Test signal received. Return to the website to see the confirmation."
+    });
+  } catch (error) {
+    console.error("QR demo confirm error:", error.message);
+    return sendError(res, 500, "Could not process the QR test signal.");
+  }
+});
+
+app.get("/api/demo-access/status/:sessionId", auth("PLAYER"), async (req, res) => {
+  try {
+    await ensureDemoAccessTable();
+    const result = await query(
+      `UPDATE demo_access_sessions
+       SET status='EXPIRED'
+       WHERE session_id=$1 AND player_id=$2 AND status='WAITING' AND expires_at <= NOW()`,
+      [req.params.sessionId, req.auth.id]
+    );
+    const status = await query(
+      `SELECT session_id, status, submitted_text, created_at, expires_at, confirmed_at
+       FROM demo_access_sessions WHERE session_id=$1 AND player_id=$2`,
+      [req.params.sessionId, req.auth.id]
+    );
+    if (!status.rowCount) return sendError(res, 404, "QR test session not found.");
+    return res.json({ok:true, mode:"MOCK_ONLY", session:status.rows[0]});
+  } catch (error) {
+    console.error("QR demo status error:", error.message);
+    return sendError(res, 500, "Could not load QR test status.");
+  }
+});
+
 app.get("/api/demo-payments/:testId", auth("PLAYER"), async (req, res) => {
   try {
     await ensureDemoPaymentTables();
