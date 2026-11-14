@@ -1865,3 +1865,25 @@ body:not(.admin-body) #app .status-pill { white-space:nowrap; }
   .admin-body .payment-filter-row { align-items:stretch; flex-direction:column; gap:7px; }
   .admin-body .payment-filter-row select { min-width:0; width:100%; }
 }
+
+
+/* QR signal demo */
+.qr-demo-panel { overflow:hidden; position:relative; }
+.qr-demo-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.qr-demo-heading h2 { margin:7px 0; font-size:clamp(23px,3vw,30px); }
+.qr-demo-tag { padding:7px 11px; border:1px solid rgba(180,130,255,.28); border-radius:999px; color:#d9baff; background:rgba(148,88,255,.1); font-size:10px; font-weight:900; letter-spacing:.12em; }
+.qr-demo-content { display:grid; grid-template-columns:minmax(190px,250px) minmax(0,1fr); gap:24px; align-items:center; margin-top:20px; }
+.qr-demo-art { min-height:250px; display:grid; place-items:center; padding:14px; border-radius:18px; background:radial-gradient(circle at 50% 40%,rgba(150,91,255,.17),transparent 68%),#0b0912; border:1px solid rgba(182,130,255,.2); }
+#demoQrCode { min-width:220px; min-height:220px; display:grid; place-items:center; }
+#demoQrCode img,#demoQrCode canvas { display:block; max-width:100%; height:auto; border:9px solid white; border-radius:8px; }
+.qr-placeholder { display:grid; place-items:center; width:190px; height:190px; padding:18px; text-align:center; color:#9e91b1; border:1px dashed rgba(190,155,255,.3); border-radius:12px; }
+.qr-demo-info { min-width:0; }
+.qr-demo-status { display:flex; align-items:center; gap:10px; padding:13px 14px; border-radius:12px; color:#f4dca8; background:rgba(255,190,70,.08); border:1px solid rgba(255,190,70,.2); font-weight:800; }
+.qr-demo-status.granted { color:#aaffce; background:rgba(43,210,126,.1); border-color:rgba(43,210,126,.32); }
+.qr-demo-status.expired { color:#ffb5c4; background:rgba(255,80,115,.08); border-color:rgba(255,80,115,.25); }
+.demo-pulse { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#ffc75e; box-shadow:0 0 0 5px rgba(255,199,94,.12); animation:demoPulse 1.6s infinite; }
+.qr-demo-status.granted .demo-pulse { background:#48df96; box-shadow:0 0 0 5px rgba(72,223,150,.12); }
+@keyframes demoPulse { 50% { opacity:.4; transform:scale(.82); } }
+#demoQrHelp { line-height:1.6; margin:12px 0; }
+#demoQrSession { overflow-wrap:anywhere; text-align:right; }
+@media(max-width:620px) { .qr-demo-content { grid-template-columns:1fr; gap:16px; } .qr-demo-art { min-height:230px; } }
