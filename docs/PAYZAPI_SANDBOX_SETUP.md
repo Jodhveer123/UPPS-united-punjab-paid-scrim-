@@ -1,56 +1,46 @@
-# PayZapi sandbox configuration for the UPPS preview branch
+# UPPS mock payment verification demo
 
-This document is for the isolated `sandbox-token-verification-demo` branch only.
+This branch contains a **mock-only** verification flow. It does not connect to PayZapi, FamPay, UPI, or any other payment service. It creates no real payment request and transfers no money.
 
-## Current safety boundary
+## Vercel Preview variables
 
-The branch must remain a non-cash demonstration. It must not create real UPI orders, accept live credentials, mark paid tournament registrations as approved, or release paid-tournament room details. A simulated test result must never change the existing `registrations.payment_status` or `registrations.status` fields.
+In the Vercel project, open **Settings → Environment Variables** and add these variables for **Preview** only, scoped to `sandbox-token-verification-demo`:
 
-## Where credentials belong
+| Variable | Example placeholder | Purpose |
+|---|---|---|
+| `DEMO_PAYMENT_API_KEY` | `payment-key` | Server-side HMAC key used to create a mock checkout reference |
+| `DEMO_WEBHOOK_KEY` | `webhook-key` | Shared test secret expected in the mock webhook header |
 
-If/when PayZapi confirms the sandbox API contract, add credentials in the Vercel project:
+Use your own random test-only values in Vercel rather than the example words above. Do not add them to Production, commit real secrets, or send them in chat. The `.env.example` file is only a template.
 
-1. Open the UPPS project in Vercel.
-2. Open **Settings → Environment Variables**.
-3. Add the variables below for **Preview** only, scoped to the Git branch `sandbox-token-verification-demo`.
-4. Do not add them to Production or Development. Do not commit them to GitHub, put them in HTML/JavaScript, or send them in chat.
+## How the mock flow works
 
-Planned variable names (the current application does not yet read these variables):
+1. A logged-in player sends `POST /api/demo-payments/create`.
+2. The backend creates an isolated database record with a unique `TESTPAY-` ID, fixed amount `1.00`, currency `TEST`, and status `TEST_PENDING`.
+3. The backend signs the internal checkout reference with `DEMO_PAYMENT_API_KEY`. The key itself is never returned to the browser.
+4. A test sender posts a fake `payment.confirmed` event to `POST /api/demo-payments/webhook`, including the test ID, amount, currency, checkout reference, and a unique event ID.
+5. The backend checks `x-demo-webhook-key`, verifies the signed reference, checks the expected test amount/currency, and rejects unknown or replayed events.
+6. A valid event changes only the isolated demo record to `TEST_VERIFIED`.
+7. The player can read the result through `GET /api/demo-payments/:testId`.
 
-- `PAYZAPI_TEST_API_KEY` — test key only (PayZapi advertises a `fam_test_...` prefix).
-- `PAYZAPI_TEST_WEBHOOK_SECRET` — only if PayZapi provides a separate sandbox webhook secret.
-- `PAYZAPI_TEST_BASE_URL` — only after PayZapi confirms the sandbox base URL in writing.
+## Windows CMD test outline
 
-Do not use a `fam_live_...` key. Do not substitute the documented production base URL as a sandbox URL.
+First sign in to the Preview website in your browser. Use the browser's authenticated session when calling the create endpoint, or use the site's existing authenticated API session. The create endpoint returns `testId` and `checkoutReference`.
 
-## Why the provider connection is not enabled yet
+Then send a simulated webhook from CMD (replace the preview URL and values with the returned ones):
 
-The public PayZapi documentation currently has an important gap:
+```cmd
+curl.exe -X POST "https://YOUR-VERCEL-PREVIEW-URL/api/demo-payments/webhook" -H "Content-Type: application/json" -H "x-demo-webhook-key: YOUR_DEMO_WEBHOOK_KEY" -d "{\"eventId\":\"evt-test-001\",\"event\":\"payment.confirmed\",\"testId\":\"TESTPAY-REPLACE\",\"amount\":\"1.00\",\"currency\":\"TEST\",\"checkoutReference\":\"PASTE_RETURNED_REFERENCE\"}"
+```
 
-- The API reference labels `https://payzapi.in/api/v1` as the **Production API Base URL** and its request examples use `fam_live_...`.
-- The product page advertises `fam_test_...` keys and five free sandbox test requests, but does not specify a separate sandbox base URL or clearly state whether test keys use the production host.
-- The API reference describes `/check` statuses as `completed`, `pending`, and `expired`; its webhook example uses `payment.completed`, while the product page also shows `order.paid` / `paid`. These event/status differences need provider confirmation before a verifier can safely interpret them.
+A successful simulated event returns `TEST_VERIFIED`. Repeating the same event is treated as a duplicate. A wrong webhook key, amount, currency, event type, or checkout reference is rejected.
 
-Therefore, do not send any key to an endpoint until PayZapi confirms the sandbox host, supported test-key behavior, exact webhook event shape, and test webhook signing secret.
+## Safety and scope
 
-## Intended verification flow (test-only)
+- This is not a payment gateway integration. No provider API request, UPI intent, QR code, payment link, or real transaction exists.
+- `TEST_VERIFIED` is deliberately separate from the existing registration `VERIFIED` state.
+- The mock routes do **not** approve tournament registrations, grant tournament entry, reveal room credentials, or update prizes.
+- Existing tournament/payment workflows are not modified by this mock verifier.
+- Do not add live provider keys or use this test harness to verify real payments.
 
-1. A player starts a clearly labelled simulated test transaction in the preview branch.
-2. The UPPS backend creates a sandbox-only test record with a unique internal test ID. No UPI QR, payment link, or money transfer is created.
-3. A test event is submitted to the preview webhook route.
-4. The backend verifies the HMAC-SHA256 signature over the exact raw request body using a test-only secret, then validates the test ID, expected test amount, event type, and duplicate-event status.
-5. The backend updates only the sandbox test record and writes an audit event.
-6. The player/admin preview screens display **TEST VERIFIED** or **TEST FAILED**. This state is visually and structurally separate from tournament registration/payment approval.
-
-A browser redirect or a client-side “success” message is never proof of payment. A failed signature, mismatched test ID/amount, unknown event, or duplicate event must not produce a verified test result.
-
-## Existing UPPS code
-
-The current application uses Express and PostgreSQL. Its existing manual payment workflow uses `registrations.payment_status`, `payment_events`, and the admin payment-review routes. Keep that workflow unchanged in this demonstration. Do not reuse its `VERIFIED` state for simulated events.
-
-## Official provider references
-
-- https://payzapi.in/docs
-- https://payzapi.in/
-
-This document records the safe configuration plan; it does not claim that a PayZapi sandbox connection has been implemented or tested.
+The mock route implementation is in `backend/server.js`; the environment variable template is `.env.example`.
